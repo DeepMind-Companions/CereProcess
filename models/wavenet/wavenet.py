@@ -1,0 +1,77 @@
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+class WaveLayer(nn.Module):
+    def __init__(self, in_channels, kernel_size, dilation):
+        super(WaveLayer, self).__init__()
+        self.padding = (kernel_size - 1) * dilation
+        self.conv = nn.Conv1d(in_channels, in_channels, kernel_size, padding=self.padding, dilation=dilation)
+        self.tanh = nn.Tanh()
+        self.sig = nn.Sigmoid()
+        self.filter = nn.Conv1d(in_channels, in_channels, 1)
+        self.gate = nn.Conv1d(in_channels, in_channels, 1)
+
+        # Initialize weights
+        torch.nn.init.xavier_uniform_(self.conv.weight, gain=1.0, generator=None)
+        torch.nn.init.xavier_uniform_(self.filter.weight, gain=1.0, generator=None)
+        torch.nn.init.xavier_uniform_(self.gate.weight, gain=1.0, generator=None)
+       # self.skip = nn.Conv1d(out_channels, in_channels, 1)
+       # self.residual = nn.Conv1d(out_channels, in_channels, 1)
+        
+    def forward(self, x):
+        # x_padded = torch.nn.functional.pad(x, (self.padding, 0))
+        output = self.conv(x)
+        filter = self.filter(output)
+        gate = self.gate(output)
+        tanh = self.tanh(filter)
+        sig = self.sig(gate)
+        z = tanh*sig
+        z = z[:,:,:-self.padding]
+        x = x + z
+        return x
+
+class WaveBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, dilation_rates):
+        super(WaveBlock, self).__init__()
+        self.layers = nn.ModuleList()
+        dilations = [2**i for i in range(dilation_rates)]
+        self.conv1d = nn.Conv1d(in_channels, out_channels, 1)
+        for dilation in dilations:
+            self.layers.append(WaveLayer(out_channels, kernel_size, dilation))
+
+    def forward(self, x):
+        x = self.conv1d(x)
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
+class WaveNet(nn.Module):
+    def __init__(self):
+        super(WaveNet, self).__init__()
+        self.block1 = WaveBlock(22, 16, 3, 8)
+        self.block2 = WaveBlock(16, 32, 3, 5)
+        self.block3 = WaveBlock(32, 64, 3, 3)
+        self.block4 = WaveBlock(64, 64, 2, 2)
+        self.lstmblock = nn.LSTM(7, 1, batch_first=True)
+        self.dense_layer = nn.Linear(64, 1)
+
+
+    def forward(self, x):
+        x = self.block1(x)
+        x = F.avg_pool1d(x, 10)
+        x = self.block2(x)
+        x = F.avg_pool1d(x, 10)
+        x = self.block3(x)
+        x = F.avg_pool1d(x, 10)
+        x = self.block4(x)
+        x = F.avg_pool1d(x, 2)
+        x, _ = self.lstmblock(x)
+        x = x.squeeze(-1)
+        x = F.dropout(x, 0.5)
+        x = self.dense_layer(x)
+        x = F.softmax(x, dim=1)
+        return x
+
+
