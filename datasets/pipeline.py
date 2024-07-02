@@ -103,6 +103,23 @@ class BipolarRef(Preprocess):
             data.drop_channels(ch_names=CHANNELS)   
             return data 
 
+class Reverse(Preprocess):
+    ''' Responsible for reversing the data
+        Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data reversed
+    '''
+    def func(self, data):
+        # Get the data as a NumPy array
+        data_only, _ = data[:]
+
+        # Reverse the time sequence of the data
+        data_reversed = np.flip(data_only, axis=1)
+
+        # Create a new Raw object with the reversed data
+        info = data.info
+        raw_reversed = mne.io.RawArray(data_reversed, info, verbose='error')
+        return raw_reversed
+
 class Pipeline(Preprocess):
     ''' Pipeline class defines the preprocessing pipeline for the EEG data.
         Keeps the pipeline for preprocessing the data
@@ -149,15 +166,29 @@ class Pipeline(Preprocess):
         return data
 
 
-def get_wavenet_pipeline(index = 0):
+def get_wavenet_pipeline():
     ''' Returns the preprocessing pipeline for the Wavenet model
     '''
     pipeline = Pipeline()
     pipeline.add(ReduceChannels())
     pipeline.add(ClipData(100))
     pipeline.add(ResampleData(250))
-    pipeline.add(CropData(60*index, 60+60*index))
+    pipeline.add(CropData(0, 60))
     pipeline.add(HighPassFilter(1.0))
     pipeline.add(NotchFilter(60))
     pipeline.add(BipolarRef())
+    return pipeline
+
+def get_wavenet_reverse():
+    ''' Returns the preprocessing pipeline for the Wavenet model (second min)
+    '''
+    pipeline = Pipeline()
+    pipeline.add(ReduceChannels())
+    pipeline.add(ClipData(100))
+    pipeline.add(ResampleData(250))
+    pipeline.add(CropData(60, 120))
+    pipeline.add(HighPassFilter(1.0))
+    pipeline.add(NotchFilter(60))
+    pipeline.add(BipolarRef())
+    pipeline.add(Reverse())
     return pipeline
