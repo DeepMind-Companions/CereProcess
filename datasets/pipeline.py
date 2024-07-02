@@ -49,7 +49,7 @@ class ResampleData(Preprocess):
     def __init__(self, sample_rate):
         self.sample_rate = sample_rate
     def func(self, data):
-        return data.resample(100)
+        return data.resample(self.sample_rate)
 
 class CropData(Preprocess):
     ''' Responsible for cropping the data to the specified time range
@@ -100,8 +100,8 @@ class BipolarRef(Preprocess):
     def func(self, data):
         for anode, cathode in self.pairs:
             data = mne.set_bipolar_reference(data.load_data(), anode=[anode], cathode=[cathode], ch_name=f'{anode}-{cathode}', drop_refs=False, copy=True, verbose=False)
-            data.drop_channels(ch_names=CHANNELS)   
-            return data 
+        data.drop_channels(ch_names=CHANNELS)   
+        return data 
 
 class Reverse(Preprocess):
     ''' Responsible for reversing the data
@@ -119,6 +119,14 @@ class Reverse(Preprocess):
         info = data.info
         raw_reversed = mne.io.RawArray(data_reversed, info, verbose='error')
         return raw_reversed
+
+class MakeNormal(Preprocess):
+    ''' Responsible for making the data normal
+        Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data made normal
+    '''
+    def func(self, data):
+        return data.apply_function(lambda data: (data - np.mean(data)) / np.std(data))
 
 class Pipeline(Preprocess):
     ''' Pipeline class defines the preprocessing pipeline for the EEG data.
