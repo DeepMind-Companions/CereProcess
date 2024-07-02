@@ -99,8 +99,6 @@ class BipolarRef(Preprocess):
             data.drop_channels(ch_names=CHANNELS)   
             return data 
 
-
-
 class Pipeline(Preprocess):
     ''' Pipeline class defines the preprocessing pipeline for the EEG data.
         Keeps the pipeline for preprocessing the data
@@ -147,3 +145,15 @@ class Pipeline(Preprocess):
         return data
 
 
+def get_wavenet_pipeline(index = 0):
+    ''' Returns the preprocessing pipeline for the Wavenet model
+    '''
+    pipeline = Pipeline()
+    pipeline.add(ReduceChannels())
+    pipeline.add(ClipData(100))
+    pipeline.add(ResampleData(250))
+    pipeline.add(CropData(60*index, 60+60*index))
+    pipeline.add(HighPassFilter(1.0))
+    pipeline.add(NotchFilter(60))
+    pipeline.add(BipolarRef())
+    return pipeline
