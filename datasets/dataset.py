@@ -60,7 +60,7 @@ class Dataset:
 
         return norm, abnorm
 
-    def save_to_npz(self, destdir, div = 'train'):
+    def save_to_npz(self, destdir, div = 'train', appendname=""):
         ''' Saves the data to a numpy file
             INPUT:
                 destdir - string - the directory to save the data
@@ -75,10 +75,10 @@ class Dataset:
             writer = csv.writer(csvfile)
             writer.writerow(['File', 'Label'])
             for file in normal:
-                filename = file.split('/')[-1].split('.')[0] + '.npz'
+                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
                 writer.writerow([filename, 0])
             for file in abnormal:
-                filename = file.split('/')[-1].split('.')[0] + '.npz'
+                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
                 writer.writerow([filename, 1])
                 
         print("Converting Normal Files")
@@ -88,7 +88,7 @@ class Dataset:
             data = self.pipeline.apply(data)
             data = np.array(data.get_data())
             label = np.array(label)
-            filename = file.split('/')[-1].split('.')[0] + '.npz'
+            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
             np.savez(os.path.join(destdir, filename), data=data, label=label)
         print("Converting Abnormal Files now")
         for file in tqdm(abnormal):
@@ -97,7 +97,7 @@ class Dataset:
             data = self.pipeline.apply(data)
             data = np.array(data.get_data())
             label = np.array(label)
-            filename = file.split('/')[-1].split('.')[0] + '.npz'
+            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
             np.savez(os.path.join(destdir, filename), data=data, label=label)
 
         return destdir
