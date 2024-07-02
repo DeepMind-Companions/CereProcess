@@ -1,4 +1,4 @@
-CHANNELS = ['FP1',
+NMT_CHANNELS = ['FP1',
  'FP2',
  'F3',
  'F4',
@@ -21,7 +21,7 @@ CHANNELS = ['FP1',
  'PZ'
  ]
 
-PAIRS = [
+NMT_PAIRS = [
     ('FP1', 'F7'),
     ('FP1', 'F3'),
     ('FP2', 'F4'),
