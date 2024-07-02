@@ -71,7 +71,13 @@ class Dataset:
         os.makedirs(destdir, exist_ok=True)
 
         # Saving data in csv file too
-        with open(os.path.join(destdir, 'data.csv'), 'w') as csvfile:
+
+        if (appendname==""):
+            wrflag = 'w'
+        else:
+            wrflag = 'a'
+
+        with open(os.path.join(destdir, 'data.csv'), wrflag) as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['File', 'Label'])
             for file in normal:

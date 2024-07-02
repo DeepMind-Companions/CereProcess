@@ -67,13 +67,12 @@ class HighPassFilter(Preprocess):
         Inputs: raw EEG data in MNE format
         Outputs: raw EEG data with a high pass filter applied
     '''
-    def __init__(self, l_freq, h_freq=None, fir_design='butterworth', l_trans_bandwidth='auto'):
+    def __init__(self, l_freq, h_freq=None):
         self.l_freq = l_freq
         self.h_freq = h_freq
-        self.fir_design = fir_design
-        self.l_trans_bandwitdth=l_trans_bandwidth
-    def func(self, data):
-        return data.filter(l_freq=self.l_freq, h_freq=self.h_freq, fir_design=self.fir_design, l_trans_bandwidth=self.l_trans_bandwitdth)
+    def func(self, data):   
+        iir_params = dict(order=4, ftype='butter', output='sos')
+        return data.filter(l_freq=self.l_freq, h_freq=self.h_freq, method='iir', iir_params=iir_params, verbose='error')
 
 class NotchFilter(Preprocess):
     ''' Responsible for applying a notch filter to the data
@@ -84,7 +83,12 @@ class NotchFilter(Preprocess):
         self.freqs = freqs
         self.fir_design = fir_design
     def func(self, data):
-        return data.notch_filter(self.freqs, fir_design=self.fir_design)
+        # Check the sampling rate and calculate the Nyquist frequency
+        sfreq = data.info['sfreq']
+        nyquist_freq = sfreq / 2
+        if (self.freqs < nyquist_freq):
+            return data.notch_filter(self.freqs, fir_design=self.fir_design, verbose='error')
+        return data
 
 class BipolarRef(Preprocess):
     ''' Responsible for applying a bipolar reference to the data
