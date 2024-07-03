@@ -49,6 +49,9 @@ class ResampleData(Preprocess):
     def __init__(self, sample_rate):
         self.sample_rate = sample_rate
     def func(self, data):
+        sfreq = data.info['sfreq']
+        if (sfreq == self.sample_rate):
+            return data
         return data.resample(self.sample_rate)
 
 class CropData(Preprocess):
