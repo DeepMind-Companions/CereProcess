@@ -73,44 +73,47 @@ class Dataset:
         # Saving data in csv file too
 
         if (appendname==""):
-            wrflag = 'w'
-        else:
-            wrflag = 'a'
+            with open(os.path.join(destdir, 'data.csv'), 'w') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['File', 'Label'])
 
-        with open(os.path.join(destdir, 'data.csv'), wrflag) as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['File', 'Label'])
-            for file in normal:
-                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                writer.writerow([filename, 0])
-            for file in abnormal:
-                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                writer.writerow([filename, 1])
+        
+            # for file in normal:
+            #     filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
                 
-        print("Converting Normal Files")
-        for file in tqdm(normal):
-            label = [0, 1]
-            try:
-                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-            except:
-                continue
-            data = self.pipeline.apply(data)
-            data = np.array(data.get_data())
-            label = np.array(label)
-            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-            np.savez(os.path.join(destdir, filename), data=data, label=label)
-        print("Converting Abnormal Files now")
-        for file in tqdm(abnormal):
-            label = [1, 0]
-            try:
-                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-            except:
-                continue
-            data = self.pipeline.apply(data)
-            data = np.array(data.get_data())
-            label = np.array(label)
-            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-            np.savez(os.path.join(destdir, filename), data=data, label=label)
+            # for file in abnormal:
+            #     filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+            #     writer.writerow([filename, 1])
+                
+
+        with open(os.path.join(destdir, 'data.csv'), 'a') as csvfile:
+            writer = csv.writer(csvfile)
+            print("Converting Normal Files")
+            for file in tqdm(normal):
+                label = [0, 1]
+                try:
+                    data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                except:
+                    continue
+                data = self.pipeline.apply(data)
+                data = np.array(data.get_data())
+                label = np.array(label)
+                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                np.savez(os.path.join(destdir, filename), data=data, label=label)
+                writer.writerow([filename, 0])
+            print("Converting Abnormal Files now")
+            for file in tqdm(abnormal):
+                label = [1, 0]
+                try:
+                    data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                except:
+                    continue
+                data = self.pipeline.apply(data)
+                data = np.array(data.get_data())
+                label = np.array(label)
+                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                np.savez(os.path.join(destdir, filename), data=data, label=label)
+                writer.writerow([filename, 0])
 
         return destdir
 
