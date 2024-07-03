@@ -4,7 +4,7 @@
 import mne
 import csv
 import numpy as np
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 import random
 import os
 from .getfiles import get_files, get_traineval, get_filedir
@@ -90,7 +90,10 @@ class Dataset:
         print("Converting Normal Files")
         for file in tqdm(normal):
             label = [0, 1]
-            data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+            try:
+                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+            except:
+                continue
             data = self.pipeline.apply(data)
             data = np.array(data.get_data())
             label = np.array(label)
@@ -99,7 +102,10 @@ class Dataset:
         print("Converting Abnormal Files now")
         for file in tqdm(abnormal):
             label = [1, 0]
-            data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+            try:
+                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+            except:
+                continue
             data = self.pipeline.apply(data)
             data = np.array(data.get_data())
             label = np.array(label)
