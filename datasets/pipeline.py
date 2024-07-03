@@ -203,3 +203,16 @@ def get_wavenet_reverse():
     pipeline.add(BipolarRef())
     pipeline.add(Reverse())
     return pipeline
+
+
+def get_scnet_pipeline():
+    '''Returns the preprocessing pipeline for SCNet Model
+    '''
+    pipeline = Pipeline()
+    pipeline.add(ReduceChannels())
+    pipeline.add(ResampleData(100))
+    pipeline.add(CropData(60, 480))
+    pipeline.add(ClipData(100))
+    pipeline.add(BipolarRef())
+    return pipeline
+
