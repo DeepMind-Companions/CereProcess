@@ -13,9 +13,9 @@ class WaveLayer(nn.Module):
         self.gate = nn.Conv1d(in_channels, in_channels, 1)
 
         # Initialize weights
-        torch.nn.init.xavier_uniform_(self.conv.weight, gain=1.0, generator=None)
-        torch.nn.init.xavier_uniform_(self.filter.weight, gain=1.0, generator=None)
-        torch.nn.init.xavier_uniform_(self.gate.weight, gain=1.0, generator=None)
+        torch.nn.init.xavier_uniform_(self.conv.weight, gain=1.0)
+        torch.nn.init.xavier_uniform_(self.filter.weight, gain=1.0)
+        torch.nn.init.xavier_uniform_(self.gate.weight, gain=1.0)
        # self.skip = nn.Conv1d(out_channels, in_channels, 1)
        # self.residual = nn.Conv1d(out_channels, in_channels, 1)
         
@@ -55,7 +55,7 @@ class WaveNet(nn.Module):
         self.block3 = WaveBlock(32, 64, 3, 3)
         self.block4 = WaveBlock(64, 64, 2, 2)
         self.lstmblock = nn.LSTM(7, 1, batch_first=True)
-        self.dense_layer = nn.Linear(64, 1)
+        self.dense_layer = nn.Linear(64, 2)
 
 
     def forward(self, x):
