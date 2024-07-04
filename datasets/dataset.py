@@ -5,9 +5,8 @@ import mne
 import csv
 import numpy as np
 from tqdm.notebook import tqdm
-import random
 import os
-from .getfiles import get_files, get_traineval, get_filedir
+from .getfiles import get_files
 from .pipeline import Pipeline
 
 class Dataset:
@@ -21,7 +20,7 @@ class Dataset:
                 datapath - string - path to the MNE source files
                 basedir - string - the directory before the train and eval directories
         '''
-        self.traindir, self.evaldir = get_traineval(datapath, basedir)
+        self.trainfiles, self.evalfiles = get_files(datapath, basedir)
         self.pipeline = Pipeline()
 
     def set_pipeline(self, pipeline):
@@ -38,79 +37,62 @@ class Dataset:
         '''
         self.pipeline = self.pipeline + pipeline
 
-    def load_data(self, div = 'train', base_dir = '01_tcp_ar'):
-        ''' Loads the data from the dataset
-            INPUT:
-                div - string - the division of the dataset to load
-            OUTPUT:
-                data - EEG - the data loaded from the dataset
-        '''
-        if div == 'train':
-            dir = self.traindir
-        elif div == 'eval':
-            dir = self.evaldir
-        else:
-            raise ValueError('Invalid division, expected "train" or "eval"')
 
-        normal = get_filedir(dir, True, base_dir)
-        norm = [os.path.join(normal, file) for file in os.listdir(normal)]
-        abnormal = get_filedir(dir, False, base_dir)
-        abnorm = [os.path.join(abnormal, file) for file in os.listdir(abnormal)]
-
-
-        return norm, abnorm
-
-    def save_to_npz(self, destdir, div = 'train', appendname="", base_dir = '01_tcp_ar'):
+    def save_to_npz(self, destdir, div = 'train', appendname=""):
         ''' Saves the data to a numpy file
             INPUT:
                 destdir - string - the directory to save the data
                 div - string - the division of the dataset to save
         '''
-        normal, abnormal = self.load_data(div, base_dir)
         destdir = os.path.join(destdir, div)
         os.makedirs(destdir, exist_ok=True)
+
+        if (div == 'train'):
+            normal = self.trainfiles['normal']
+            abnormal = self.trainfiles['abnormal']
+        elif (div == 'eval'):
+            normal = self.evalfiles['normal']
+            abnormal = self.evalfiles['abnormal']
+        else:
+            raise ValueError("Invalid division")
 
         # Saving data in csv file too
 
         if (appendname==""):
-            wrflag = 'w'
-        else:
-            wrflag = 'a'
+            with open(os.path.join(destdir, 'data.csv'), 'w') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['File', 'Label'])
 
-        with open(os.path.join(destdir, 'data.csv'), wrflag) as csvfile:
+        with open(os.path.join(destdir, 'data.csv'), 'a') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(['File', 'Label'])
-            for file in normal:
+
+            print("Converting Normal Files")
+            for file in tqdm(normal):
+                label = [1, 0]
+                try:
+                    data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                except:
+                    continue
+                data = self.pipeline.apply(data)
+                data = np.array(data.get_data())
+                label = np.array(label)
                 filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                np.savez(os.path.join(destdir, filename), data=data, label=label)
                 writer.writerow([filename, 0])
-            for file in abnormal:
+
+            print("Converting Abnormal Files now")
+            for file in tqdm(abnormal):
+                label = [1, 0]
+                try:
+                    data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                except:
+                    continue
+                data = self.pipeline.apply(data)
+                data = np.array(data.get_data())
+                label = np.array(label)
                 filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                np.savez(os.path.join(destdir, filename), data=data, label=label)
                 writer.writerow([filename, 1])
-                
-        print("Converting Normal Files")
-        for file in tqdm(normal):
-            label = [0, 1]
-            try:
-                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-            except:
-                continue
-            data = self.pipeline.apply(data)
-            data = np.array(data.get_data())
-            label = np.array(label)
-            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-            np.savez(os.path.join(destdir, filename), data=data, label=label)
-        print("Converting Abnormal Files now")
-        for file in tqdm(abnormal):
-            label = [1, 0]
-            try:
-                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-            except:
-                continue
-            data = self.pipeline.apply(data)
-            data = np.array(data.get_data())
-            label = np.array(label)
-            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-            np.savez(os.path.join(destdir, filename), data=data, label=label)
 
         return destdir
 
