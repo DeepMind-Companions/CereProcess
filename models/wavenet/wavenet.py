@@ -39,6 +39,7 @@ class WaveBlock(nn.Module):
         self.conv1d = nn.Conv1d(in_channels, out_channels, 1)
         for dilation in dilations:
             self.layers.append(WaveLayer(out_channels, kernel_size, dilation))
+        torch.nn.init.xavier_uniform_(self.conv1d.weight, gain=1.0, generator=None)
 
     def forward(self, x):
         x = self.conv1d(x)
@@ -54,8 +55,9 @@ class WaveNet(nn.Module):
         self.block2 = WaveBlock(16, 32, 3, 5)
         self.block3 = WaveBlock(32, 64, 3, 3)
         self.block4 = WaveBlock(64, 64, 2, 2)
-        self.lstmblock = nn.LSTM(7, 1, batch_first=True)
+        self.lstmblock = nn.LSTM(7, 1, 64, batch_first=True)
         self.dense_layer = nn.Linear(64, 1)
+        torch.nn.init.xavier_uniform_(self.dense_layer.weight, gain=1.0, generator=None)
 
 
     def forward(self, x):
