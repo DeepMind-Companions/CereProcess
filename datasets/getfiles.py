@@ -40,47 +40,37 @@ def get_filedir(datapath, normal=True, basedir = '01_tcp_ar'):
    
     return filedir
 
-def get_files(datapath, eval=False):
+def get_files(datapath, base_dir):
     '''
-        Using this to get individual files along with their Y (output) values
+        Using this to get the files from the source datapath seperately
+        takes in the datapath for the MNE source files in the correct directory format and return the files
 
-        INPUT:
-            filedir - string - path to the directory containing the files
-        OUPTUT:
-            files - list - list of files
-            Y - list - list of output values
+        INPUT: 
+            datapath - string - path to the MNE source files
+            div_first - string - the divison it has been divided into first train or class
 
+        OUPTUT: trainfiles[2], evalfiles[2] - list of files in the training and evaluation data, both normal and abnormal
     '''
+    datapath = os.path.join(datapath, base_dir)
+    trainfiles = {"normal": [], "abnormal": []}
+    evalfiles = {"normal": [], "abnormal": []}
+    for root, dirs, files in os.walk(datapath):
+        roots = root.split('/')
+        for file in files:
+            if file.endswith('.edf'):
+                if 'train' in roots:
+                    if 'normal' in roots:
+                        trainfiles['normal'].append(os.path.join(root, file))
+                    else:
+                        trainfiles['abnormal'].append(os.path.join(root, file))
+                else:
+                    if 'normal' in roots:
+                        evalfiles['normal'].append(os.path.join(root, file))
+                    else:
+                        evalfiles['abnormal'].append(os.path.join(root, file))
 
-    # Get the training and evaluation directories
-    traindir, evaldir = get_traineval(datapath)
-
-    # Get the normal and abnormal directories
-    normal_train = get_filedir(traindir)
-    abnormal_train = get_filedir(traindir, False)
-    normal_eval = get_filedir(evaldir)
-    abnormal_eval = get_filedir(evaldir, False)
-
-    # Get the files
-    files = []
-
-    # Get the normal files
-    if (not eval):
-        for file in os.listdir(normal_train):
-            files.append((os.path.join(normal_train, file), 0))
-        for file in os.listdir(abnormal_train):
-            files.append((os.path.join(abnormal_train, file), 1))
-    else:
-        for file in os.listdir(normal_eval):
-            files.append((os.path.join(normal_eval, file), 0))
-        for file in os.listdir(abnormal_eval):
-            files.append((os.path.join(abnormal_eval, file), 1))
-
-
-    # Shuffle the files
-    random.shuffle(files)
-
-    return files
+    return trainfiles, evalfiles
+    
 
 
 
