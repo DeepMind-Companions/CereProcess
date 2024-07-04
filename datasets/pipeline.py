@@ -5,7 +5,7 @@
 
 import mne
 import numpy as np
-from .channels import CHANNELS, PAIRS
+from .channels import CHANNELS, PAIRS, NMT_CHANNELS, NMT_PAIRS
 
 class Preprocess:
     def func(self, data):
@@ -98,12 +98,13 @@ class BipolarRef(Preprocess):
         Inputs: raw EEG data in MNE format
         Outputs: raw EEG data with a bipolar reference applied
     '''
-    def __init__(self, pairs=PAIRS):
+    def __init__(self, pairs=PAIRS, channels=CHANNELS):
         self.pairs = pairs
+        self.channels=channels
     def func(self, data):
         for anode, cathode in self.pairs:
             data = mne.set_bipolar_reference(data.load_data(), anode=[anode], cathode=[cathode], ch_name=f'{anode}-{cathode}', drop_refs=False, copy=True, verbose=False)
-        data.drop_channels(ch_names=CHANNELS)   
+        data.drop_channels(ch_names=self.channels)   
         return data 
 
 class Reverse(Preprocess):
@@ -177,30 +178,38 @@ class Pipeline(Preprocess):
         return data
 
 
-def get_wavenet_pipeline():
+def get_wavenet_pipeline(dataset = 'TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model
     '''
     pipeline = Pipeline()
-    pipeline.add(ReduceChannels())
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
     pipeline.add(ClipData(100))
     pipeline.add(ResampleData(250))
     pipeline.add(CropData(0, 60))
     pipeline.add(HighPassFilter(1.0))
     pipeline.add(NotchFilter(60))
-    pipeline.add(BipolarRef())
     return pipeline
 
-def get_wavenet_reverse():
+def get_wavenet_reverse(dataset='TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model (second min)
     '''
     pipeline = Pipeline()
-    pipeline.add(ReduceChannels())
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
     pipeline.add(ClipData(100))
     pipeline.add(ResampleData(250))
     pipeline.add(CropData(60, 120))
     pipeline.add(HighPassFilter(1.0))
     pipeline.add(NotchFilter(60))
-    pipeline.add(BipolarRef())
     pipeline.add(Reverse())
     return pipeline
 
