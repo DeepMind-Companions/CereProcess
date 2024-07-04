@@ -60,13 +60,13 @@ class Dataset:
 
         return norm, abnorm
 
-    def save_to_npz(self, destdir, div = 'train', appendname=""):
+    def save_to_npz(self, destdir, div = 'train', appendname="", base_dir = '01_tcp_ar'):
         ''' Saves the data to a numpy file
             INPUT:
                 destdir - string - the directory to save the data
                 div - string - the division of the dataset to save
         '''
-        normal, abnormal = self.load_data(div)
+        normal, abnormal = self.load_data(div, base_dir)
         destdir = os.path.join(destdir, div)
         os.makedirs(destdir, exist_ok=True)
 
