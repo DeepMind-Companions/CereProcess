@@ -71,28 +71,30 @@ class Dataset:
                 label = [1, 0]
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                
+                    data = self.pipeline.apply(data)
+                    data = np.array(data.get_data())
+                    label = np.array(label)
+                    filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                    np.savez(os.path.join(destdir, filename), data=data, label=label)
+                    writer.writerow([filename, 0])
                 except:
                     continue
-                data = self.pipeline.apply(data)
-                data = np.array(data.get_data())
-                label = np.array(label)
-                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                np.savez(os.path.join(destdir, filename), data=data, label=label)
-                writer.writerow([filename, 0])
 
             print("Converting Abnormal Files now")
             for file in tqdm(abnormal):
                 label = [1, 0]
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                
+                    data = self.pipeline.apply(data)
+                    data = np.array(data.get_data())
+                    label = np.array(label)
+                    filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                    np.savez(os.path.join(destdir, filename), data=data, label=label)
+                    writer.writerow([filename, 1])
                 except:
                     continue
-                data = self.pipeline.apply(data)
-                data = np.array(data.get_data())
-                label = np.array(label)
-                filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                np.savez(os.path.join(destdir, filename), data=data, label=label)
-                writer.writerow([filename, 1])
 
         return destdir
 
