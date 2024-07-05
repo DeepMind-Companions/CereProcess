@@ -34,6 +34,17 @@ class ReduceChannels(Preprocess):
 class ClipData(Preprocess):
     ''' Responsible for Clipping the data inside a fixed voltage range
         Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data clipped between 0 and absclipx10^-6
+    '''
+    def __init__(self, absclip):
+        self.absclip = absclip
+    def func(self, data):
+        return data.apply_function(lambda data: np.clip(data, 0, 0.000001*self.absclip))
+
+
+class ClipAbsData(Preprocess):
+    ''' Responsible for Clipping the data inside a fixed voltage range
+        Inputs: raw EEG data in MNE format
         Outputs: raw EEG data clipped between -absclipx10^-6 and absclipx10^-6
     '''
     def __init__(self, absclip):
