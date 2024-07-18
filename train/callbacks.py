@@ -27,8 +27,6 @@ class History:
         plt.show()
 
 
-def get_in_history():
-    return History(), History();
 
 class Metrics:
     def __init__(self, metrics):

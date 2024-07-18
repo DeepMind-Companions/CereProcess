@@ -3,13 +3,16 @@ from tqdm.notebook import tqdm
 from IPython.display import clear_output
 
 
-def eval(model, val_loader, criterion, device, metrics, history):
+def evaluate(model, val_loader, criterion, device, metrics, history):
+    model.to(device)
     val_loss = 0
     model.eval()
     metrics.reset()
     with torch.no_grad():
         for data, target in val_loader:
             data, target = data.to(device), target.to(device)
+            target = target.float()
+            data = data.float()
             output = model(data)
             loss = criterion(output, target)
             val_loss += loss.item()
@@ -17,7 +20,9 @@ def eval(model, val_loader, criterion, device, metrics, history):
             label_check = torch.argmax(target, 1)
             metrics.update(label_check, predicted)
         val_loss /= len(val_loader)
-        history.update(metrics.compute().update({"loss": val_loss}), 'val')
+        results = metrics.compute()
+        results.update({"loss": val_loss})
+        history.update(results, 'val')
     return val_loss
 
 def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, scheduler=None):
@@ -29,6 +34,8 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         metrics.reset()
         for data, target in tqdm(train_loader):
             data, target = data.to(device), target.to(device)
+            data = data.float()
+            target = target.float()
             optimizer.zero_grad()
             output = model(data)
             loss = criterion(output, target)
@@ -39,8 +46,10 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
             train_loss += loss.item()
             metrics.update(label_check, predicted)
         train_loss /= len(train_loader)
-        history.update(metrics.compute().update({"loss": train_loss}), 'train');
-        val_loss = eval(model, val_loader, criterion, device, metrics, history)
+        results = metrics.compute()
+        results.update({"loss": train_loss})
+        history.update(results, 'train')
+        val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
         model.train()
         if val_loss < best_val_loss:
             best_val_loss = val_loss
