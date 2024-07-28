@@ -21,7 +21,23 @@ class Dataset:
                 basedir - string - the directory before the train and eval directories
         '''
         self.trainfiles, self.evalfiles = get_files(datapath, basedir)
+
+        # Calculating the lengths of both train and eval
+        trainlen = [len(self.trainfiles['normal']), len(self.trainfiles['abnormal'])]
+        evallen = [len(self.evalfiles['normal']), len(self.evalfiles['abnormal'])]
+        # Also getting the fullpath
+        fullpath = os.path.join(datapath, basedir)
+        if len(fullpath) > 10:
+            fullpath = fullpath[-10:]
+
+        self.id = fullpath + '_T' + str(trainlen) + '_E' + str(evallen)
+
         self.pipeline = Pipeline()
+
+    def get_id(self):
+        ''' Returns the ID of the dataset
+        '''
+        return self.id
 
     def set_pipeline(self, pipeline):
         ''' Adds a pipeline to the dataset
