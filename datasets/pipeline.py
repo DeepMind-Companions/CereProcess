@@ -83,10 +83,11 @@ class CropData(Preprocess):
     def __init__(self, tmin, tmax):
         self.tmin = tmin
         self.tmax = tmax
+        self.time_span = tmax - tmin
     def func(self, data):
         return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
     def get_id(self):
-        return f'{self.__class__.__name__}_{self.tmax - self.tmin}'
+        return f'{self.__class__.__name__}_{self.time_span}'
 
 class HighPassFilter(Preprocess):
     ''' Responsible for applying a high pass filter to the data
@@ -171,6 +172,8 @@ class Pipeline(Preprocess):
         '''
         
         self.pipeline = []
+        self.sampling_rate = -1
+        self.time_span = -1
 
     def __iter__(self):
         ''' Returns the iterator for the pipeline
@@ -182,6 +185,10 @@ class Pipeline(Preprocess):
             INPUT:
                 func - function - function to be added to the pipeline
         '''
+        if (func.__class__.__name__ == 'ResampleData'):
+            self.sampling_rate = func.sample_rate
+        if (func.__class__.__name__ == 'CropData'):
+            self.time_span = func.time_span
         self.pipeline.append(func)
 
     def __add__(self, pipeline):
@@ -192,6 +199,10 @@ class Pipeline(Preprocess):
         '''
         new_pipeline = Pipeline()
         new_pipeline.pipeline = self.pipeline + pipeline.pipeline
+        if (pipeline.sampling_rate != -1):
+            new_pipeline.sampling_rate = pipeline.sampling_rate
+        if (pipeline.time_span != -1):
+            new_pipeline.time_span = pipeline.time_span
         return new_pipeline
 
     def func(self, data):
@@ -217,6 +228,18 @@ class MultiPipeline():
             INPUT:
                 pipelines - list - list of pipelines to be combined
         '''
+        self.sampling_rate = -1
+        self.time_span = -1
+        if len(pipelines) > 0:
+            sample_rate = pipelines[0].sampling_rate
+            time_span = pipelines[0].time_span
+            for pipeline in pipelines:
+                if (pipeline.sampling_rate != sample_rate):
+                    raise ValueError("Sampling rates do not match")
+                if (pipeline.time_span != time_span):
+                    raise ValueError("Time spans do not match")
+            self.sampling_rate = sample_rate
+            self.time_span = time_span
         self.pipeline = pipelines
         self.__len__ = len(pipelines)
     
@@ -230,6 +253,10 @@ class MultiPipeline():
             INPUT:
                 pipeline - Pipeline - pipeline to be added to the MultiPipeline
         '''
+        if (self.sampling_rate != -1 and self.sampling_rate != pipeline.sampling_rate):
+            raise ValueError("Sampling rates do not match")
+        if (self.time_span != -1 and self.time_span != pipeline.time_span):
+            raise ValueError("Time spans do not match")
         self.pipeline.append(pipeline)
         self.__len__ = len(self.pipeline)
 
@@ -238,8 +265,7 @@ class MultiPipeline():
             INPUT:
                 pipeline - Pipeline - pipeline to be added to the MultiPipeline
         '''
-        self.pipeline.append(pipeline)
-        self.__len__ = len(self.pipeline)
+        self.add(pipeline)
 
     def get_id(self):
         return 'MULTI_' + '_'.join([pipeline.get_id() for pipeline in self.pipeline])
