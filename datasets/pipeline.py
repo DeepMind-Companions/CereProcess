@@ -174,6 +174,7 @@ class Pipeline(Preprocess):
         self.pipeline = []
         self.sampling_rate = -1
         self.time_span = -1
+        self.channels = -1
 
     def __iter__(self):
         ''' Returns the iterator for the pipeline
@@ -189,6 +190,10 @@ class Pipeline(Preprocess):
             self.sampling_rate = func.sample_rate
         if (func.__class__.__name__ == 'CropData'):
             self.time_span = func.time_span
+        if (func.__class__.__name__ == 'ReduceChannels'):
+            self.channels = len(func.channels)
+        if (func.__class__.__name__ == 'BipolarRef'):
+            self.channels = len(func.pairs)
         self.pipeline.append(func)
 
     def __add__(self, pipeline):
@@ -231,14 +236,19 @@ class MultiPipeline():
         self.pipeline = []
         self.sampling_rate = -1
         self.time_span = -1
+        self.channels = -1
         if len(pipelines) > 0:
             sample_rate = pipelines[0].sampling_rate
             time_span = pipelines[0].time_span
+            channels = pipelines[0].channels
             for pipeline in pipelines:
                 if (pipeline.sampling_rate != sample_rate):
                     raise ValueError("Sampling rates do not match")
                 if (pipeline.time_span != time_span):
                     raise ValueError("Time spans do not match")
+                if (pipeline.channels != channels):
+                    raise ValueError("Number of channels do not match")
+
                 self.pipeline.append(pipeline)
             self.sampling_rate = sample_rate
             self.time_span = time_span

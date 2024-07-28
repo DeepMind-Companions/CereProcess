@@ -9,6 +9,7 @@ from tqdm.notebook import tqdm
 import os
 from .getfiles import get_files
 from .pipeline import Pipeline, MultiPipeline
+from datetime import datetime
 
 class Dataset:
     ''' Dataset class stores the EEG data, defining a preprocessing pipeline and converting it to other forms accordingly.
@@ -74,7 +75,7 @@ class Dataset:
         # if it does not exist make it
 
         if not os.path.exists(os.path.join(destdir, 'converted.csv')):
-            columns = pd.Index(['Folder Name', 'Data ID', 'Pipeline ID', 'Sampling Rate', 'Time Span'])
+            columns = pd.Index(['Folder Name', 'Data ID', 'Pipeline ID', 'Sampling Rate', 'Time Span', 'Total Channels'])
             converted = pd.DataFrame(columns=columns)
             converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
 
@@ -93,7 +94,7 @@ class Dataset:
         evaldir = self.save_to_npz(destdir2, 'eval')
 
         # Saving the data to the csv file
-        newentry = pd.DataFrame([[foldername, self.get_id(), self.pipeline.get_id(), self.pipeline.sampling_rate, self.pipeline.time_span]], columns=converted.columns)
+        newentry = pd.DataFrame([[foldername, self.get_id(), self.pipeline.get_id(), self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels]], columns=converted.columns)
         converted = pd.concat([converted, newentry], ignore_index=True)
         converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
         return traindir, evaldir, self.pipeline.sampling_rate, self.pipeline.time_span
