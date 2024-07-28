@@ -20,6 +20,10 @@ class Preprocess:
                 data - EEG - preprocessed data
         '''
         return self.func(data)
+    def get_id(self):
+        ''' Returns the ID of the preprocessing function
+        '''
+        return self.__class__.__name__
 
 class ReduceChannels(Preprocess):
     ''' Reducing the number of channels to the 21 channels in use
@@ -40,6 +44,8 @@ class ClipData(Preprocess):
         self.absclip = absclip
     def func(self, data):
         return data.apply_function(lambda data: np.clip(data, 0, 0.000001*self.absclip))
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.absclip}'
 
 
 class ClipAbsData(Preprocess):
@@ -51,6 +57,8 @@ class ClipAbsData(Preprocess):
         self.absclip = absclip
     def func(self, data):
         return data.apply_function(lambda data: np.clip(data, -0.000001*self.absclip, 0.000001*self.absclip))
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.absclip}'
 
 class ResampleData(Preprocess):
     ''' Responsible for resampling the data to 100 Hz
@@ -64,6 +72,8 @@ class ResampleData(Preprocess):
         if (sfreq == self.sample_rate):
             return data
         return data.resample(self.sample_rate)
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.sample_rate}'
 
 class CropData(Preprocess):
     ''' Responsible for cropping the data to the specified time range
@@ -75,6 +85,8 @@ class CropData(Preprocess):
         self.tmax = tmax
     def func(self, data):
         return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.tmax - self.tmin}'
 
 class HighPassFilter(Preprocess):
     ''' Responsible for applying a high pass filter to the data
@@ -87,6 +99,8 @@ class HighPassFilter(Preprocess):
     def func(self, data):   
         iir_params = dict(order=4, ftype='butter', output='sos')
         return data.filter(l_freq=self.l_freq, h_freq=self.h_freq, method='iir', iir_params=iir_params, verbose='error')
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.l_freq}_{self.h_freq}'
 
 class NotchFilter(Preprocess):
     ''' Responsible for applying a notch filter to the data
@@ -103,6 +117,8 @@ class NotchFilter(Preprocess):
         if (self.freqs < nyquist_freq):
             return data.notch_filter(self.freqs, fir_design=self.fir_design, verbose='error')
         return data
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.freqs}'
 
 class BipolarRef(Preprocess):
     ''' Responsible for applying a bipolar reference to the data
@@ -117,6 +133,7 @@ class BipolarRef(Preprocess):
             data = mne.set_bipolar_reference(data.load_data(), anode=[anode], cathode=[cathode], ch_name=f'{anode}-{cathode}', drop_refs=False, copy=True, verbose=False)
         data.drop_channels(ch_names=self.channels)   
         return data 
+
 
 class Reverse(Preprocess):
     ''' Responsible for reversing the data
@@ -187,6 +204,9 @@ class Pipeline(Preprocess):
         for func in self.pipeline:
             data = func.func(data)
         return data
+    
+    def get_id(self):
+        return super().get_id() + '_' + '_'.join([func.get_id() for func in self.pipeline])
 
 
 def get_wavenet_pipeline(dataset = 'TUH'):
