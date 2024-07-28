@@ -7,7 +7,7 @@ import numpy as np
 from tqdm.notebook import tqdm
 import os
 from .getfiles import get_files
-from .pipeline import Pipeline
+from .pipeline import Pipeline, MultiPipeline
 
 class Dataset:
     ''' Dataset class stores the EEG data, defining a preprocessing pipeline and converting it to other forms accordingly.
@@ -32,7 +32,7 @@ class Dataset:
 
         self.id = fullpath + '_T' + str(trainlen) + '_E' + str(evallen)
 
-        self.pipeline = Pipeline()
+        self.pipeline = MultiPipeline()
 
     def get_id(self):
         ''' Returns the ID of the dataset
@@ -44,7 +44,13 @@ class Dataset:
             INPUT:
                 pipeline - Pipeline - the pipeline to add
         '''
-        self.pipeline = pipeline
+        if pipeline.__class__.__name__ == 'Pipeline':
+            self.pipeline = MultiPipeline([pipeline])
+        elif pipeline.__class__.__name__ == 'MultiPipeline':
+            self.pipeline = pipeline
+        else:
+            raise ValueError("Invalid Pipeline")
+            
 
     def add_pipeline(self, pipeline):
         ''' Adds a pipeline to the dataset
@@ -54,7 +60,7 @@ class Dataset:
         self.pipeline = self.pipeline + pipeline
 
 
-    def save_to_npz(self, destdir, div = 'train', appendname=""):
+    def save_to_npz(self, destdir, div = 'train'):
         ''' Saves the data to a numpy file
             INPUT:
                 destdir - string - the directory to save the data
@@ -72,15 +78,14 @@ class Dataset:
         else:
             raise ValueError("Invalid division")
 
+        totalpl = len(self.pipeline)
+        print("Total Pipelines: ", totalpl)
+        print("Total Normal Files: ", len(normal))
+        print("Total Abnormal Files: ", len(abnormal))
         # Saving data in csv file too
-
-        if (appendname==""):
-            with open(os.path.join(destdir, 'data.csv'), 'w') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerow(['File', 'Label'])
-
-        with open(os.path.join(destdir, 'data.csv'), 'a') as csvfile:
+        with open(os.path.join(destdir, 'data.csv'), 'w') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(['File', 'Label'])
 
             print("Converting Normal Files")
             for file in tqdm(normal):
@@ -88,12 +93,18 @@ class Dataset:
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
                 
-                    data = self.pipeline.apply(data)
-                    data = np.array(data.get_data())
-                    label = np.array(label)
-                    filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                    np.savez(os.path.join(destdir, filename), data=data, label=label)
-                    writer.writerow([filename, 0])
+                    for i, pipeline in enumerate(self.pipeline):
+                        try:
+                            appendname = '_P' + str(i)
+                            data = pipeline.apply(data)
+                            # data = self.pipeline.apply(data)
+                            data = np.array(data.get_data())
+                            label = np.array(label)
+                            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                            np.savez(os.path.join(destdir, filename), data=data, label=label)
+                            writer.writerow([filename, 0])
+                        except:
+                            continue
                 except:
                     continue
 
@@ -103,12 +114,17 @@ class Dataset:
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
                 
-                    data = self.pipeline.apply(data)
-                    data = np.array(data.get_data())
-                    label = np.array(label)
-                    filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                    np.savez(os.path.join(destdir, filename), data=data, label=label)
-                    writer.writerow([filename, 1])
+                    for i, pipeline in enumerate(self.pipeline):
+                        try:
+                            appendname = '_P' + str(i)
+                            data = pipeline.apply(data)
+                            data = np.array(data.get_data())
+                            label = np.array(label)
+                            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
+                            np.savez(os.path.join(destdir, filename), data=data, label=label)
+                            writer.writerow([filename, 1])
+                        except:
+                            continue
                 except:
                     continue
 
