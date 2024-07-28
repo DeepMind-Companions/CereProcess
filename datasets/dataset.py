@@ -4,6 +4,7 @@
 import mne
 import csv
 import numpy as np
+import pandas as pd
 from tqdm.notebook import tqdm
 import os
 from .getfiles import get_files
@@ -59,6 +60,43 @@ class Dataset:
         '''
         self.pipeline = self.pipeline + pipeline
 
+    def save_all(self, destdir):
+        ''' Saves the data to a numpy file
+            INPUT:
+                destdir - string - the directory to save the data
+        '''
+        os.makedirs(destdir, exist_ok=True)
+        print("Saving Data to Numpy Files")
+
+        # Open csv file to check all data
+        # The csv file has data stored like folder name, data id, pipeline id, sampling rate, time span
+        # Using pandas
+        # if it does not exist make it
+
+        if not os.path.exists(os.path.join(destdir, 'converted.csv')):
+            columns = pd.Index(['Folder Name', 'Data ID', 'Pipeline ID', 'Sampling Rate', 'Time Span'])
+            converted = pd.DataFrame(columns=columns)
+            converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
+
+
+        converted = pd.read_csv(os.path.join(destdir, 'converted.csv'))
+        datastored = converted[(converted['Data ID'] == self.get_id()) & (converted['Pipeline ID'] == self.pipeline.get_id())]
+        if len(datastored) > 0:
+            print("Data Already Stored")
+            return os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'train'), os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'eval')
+
+        foldername = self.id + '_P' + self.pipeline.get_id()
+        destdir2 = os.path.join(destdir, foldername)
+        print("Saving Train Data")
+        traindir = self.save_to_npz(destdir2, 'train')
+        print("Saving Eval Data")
+        evaldir = self.save_to_npz(destdir2, 'eval')
+
+        # Saving the data to the csv file
+        newentry = pd.DataFrame([[foldername, self.get_id(), self.pipeline.get_id(), self.pipeline.sampling_rate, self.pipeline.time_span]], columns=converted.columns)
+        converted = pd.concat([converted, newentry], ignore_index=True)
+        converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
+        return traindir, evaldir, self.pipeline.sampling_rate, self.pipeline.time_span
 
     def save_to_npz(self, destdir, div = 'train'):
         ''' Saves the data to a numpy file
@@ -92,7 +130,6 @@ class Dataset:
                 label = [1, 0]
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-                
                     for i, pipeline in enumerate(self.pipeline):
                         try:
                             appendname = '_P' + str(i)
@@ -113,7 +150,6 @@ class Dataset:
                 label = [1, 0]
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-                
                     for i, pipeline in enumerate(self.pipeline):
                         try:
                             appendname = '_P' + str(i)
