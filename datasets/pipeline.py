@@ -228,6 +228,7 @@ class MultiPipeline():
             INPUT:
                 pipelines - list - list of pipelines to be combined
         '''
+        self.pipeline = []
         self.sampling_rate = -1
         self.time_span = -1
         if len(pipelines) > 0:
@@ -238,15 +239,21 @@ class MultiPipeline():
                     raise ValueError("Sampling rates do not match")
                 if (pipeline.time_span != time_span):
                     raise ValueError("Time spans do not match")
+                self.pipeline.append(pipeline)
             self.sampling_rate = sample_rate
             self.time_span = time_span
-        self.pipeline = pipelines
-        self.__len__ = len(pipelines)
+        self.len = len(pipelines)
+        
+    def __len__(self):
+        ''' Returns the length of the pipeline
+        '''
+        return self.len
     
     def __iter__(self):
         ''' Returns the iterator for the pipeline
         '''
         return iter(self.pipeline)
+
 
     def add(self, pipeline):
         ''' Adds a pipeline to the MultiPipeline
@@ -258,14 +265,22 @@ class MultiPipeline():
         if (self.time_span != -1 and self.time_span != pipeline.time_span):
             raise ValueError("Time spans do not match")
         self.pipeline.append(pipeline)
-        self.__len__ = len(self.pipeline)
+        self.len = len(self.pipeline)
 
     def __add__(self, pipeline):
         ''' Adds a pipeline to the MultiPipeline
             INPUT:
                 pipeline - Pipeline - pipeline to be added to the MultiPipeline
         '''
-        self.add(pipeline)
+        newpipeline = MultiPipeline(self.pipeline)
+        if pipeline.__class__.__name__ == 'Pipeline':
+            newpipeline.add(pipeline)
+        elif pipeline.__class__.__name__ == 'MultiPipeline':
+            for pipe in pipeline.pipeline:
+                newpipeline.add(pipe)
+        else:
+            raise ValueError("Invalid pipeline")
+        return newpipeline
 
     def get_id(self):
         return 'MULTI_' + '_'.join([pipeline.get_id() for pipeline in self.pipeline])
