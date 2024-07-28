@@ -208,6 +208,42 @@ class Pipeline(Preprocess):
     def get_id(self):
         return super().get_id() + '_' + '_'.join([func.get_id() for func in self.pipeline])
 
+class MultiPipeline():
+    '''MultiPipeline class defines the preprocessing pipeline for the EEG data.
+       Combines multiple pipelines to make 1 pipeline
+    '''
+    def __init__(self, pipelines = []):
+        ''' Constructor Function
+            INPUT:
+                pipelines - list - list of pipelines to be combined
+        '''
+        self.pipeline = pipelines
+        self.__len__ = len(pipelines)
+    
+    def __iter__(self):
+        ''' Returns the iterator for the pipeline
+        '''
+        return iter(self.pipeline)
+
+    def add(self, pipeline):
+        ''' Adds a pipeline to the MultiPipeline
+            INPUT:
+                pipeline - Pipeline - pipeline to be added to the MultiPipeline
+        '''
+        self.pipeline.append(pipeline)
+        self.__len__ = len(self.pipeline)
+
+    def __add__(self, pipeline):
+        ''' Adds a pipeline to the MultiPipeline
+            INPUT:
+                pipeline - Pipeline - pipeline to be added to the MultiPipeline
+        '''
+        self.pipeline.append(pipeline)
+        self.__len__ = len(self.pipeline)
+
+    def get_id(self):
+        return 'MULTI_' + '_'.join([pipeline.get_id() for pipeline in self.pipeline])
+
 
 def get_wavenet_pipeline(dataset = 'TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model
@@ -244,6 +280,11 @@ def get_wavenet_reverse(dataset='TUH'):
     pipeline.add(Reverse())
     return pipeline
 
+def get_wavenet_pl(dataset='TUH'):
+    ''' Returns the preprocessing pipeline for the Wavenet model (third min)
+    '''
+    pipeline = MultiPipeline([get_wavenet_pipeline(dataset), get_wavenet_reverse(dataset)])
+    return pipeline
 
 def get_scnet_pipeline():
     '''Returns the preprocessing pipeline for SCNet Model
