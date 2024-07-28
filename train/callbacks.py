@@ -1,10 +1,14 @@
 from torchmetrics import Accuracy, Precision, Recall, F1Score
 import matplotlib.pyplot as plt
+import pickle
 
 
 class History:
-    def __init__(self):
-        self.history = {"train": {}, "val": {}}
+    def __init__(self, data=None):
+        if data == None:
+            self.history = {"train": {}, "val": {}}
+        else:
+            self.history = data
 
     def update(self, metrics, train = 'train'):
         for key, value in metrics.items():
@@ -25,6 +29,10 @@ class History:
             axs[i].set_xlabel('Epochs')
             axs[i].legend()
         plt.show()
+        
+    def save(self, path):
+        with open(path, 'wb') as file:
+            pickle.dump(self.history, file)
 
 
 
