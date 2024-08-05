@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from models.wavenet.alternate import AlternateLayer
 
 class WaveLayer(nn.Module):
     def __init__(self, in_channels, kernel_size, dilation):
@@ -72,8 +73,41 @@ class WaveNet(nn.Module):
         x, _ = self.lstmblock(x)
         x = x.squeeze(-1)
         x = F.dropout(x, 0.5)
+        return x
+
+
+class WaveNetEnd(nn.Module):
+    def __init__(self, input_size):
+        super(WaveNetEnd, self).__init__()
+        self.dense_layer = nn.Linear(input_size, 2)
+        torch.nn.init.xavier_uniform_(self.dense_layer.weight, gain=1.0, generator=None)
+
+    def forward(self, x):
         x = self.dense_layer(x)
         x = F.softmax(x, dim=1)
         return x
 
+
+class WaveNetFull(nn.Module):
+    def __init__(self, input_shape):
+        super(WaveNetFull, self).__init__()
+        self.wavenet = WaveNet()
+        self.alternate = AlternateLayer(input_shape)
+        self.wavenetend = WaveNetEnd(124)
+
+    def forward(self, x):
+        y = self.wavenet(x)
+        z = self.alternate(x)
+        x = torch.cat((y, z), -1)
+        x = self.wavenetend(x)
+        return x
+
+        
+
+
+
+def get_wavenet_dil():
+    return nn.Sequential(Wavenet, WaveNetEnd)
+    
+    
 
