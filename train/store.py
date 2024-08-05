@@ -38,7 +38,7 @@ def df_entry(model_description, data_description, history, hyperparameters, path
     model_path, data_path, hyp_path = save_model_details(model_description, data_description, hyperparameters, path)
     res = {
         'Model Name': model_description['name'],
-        'Model ID': model_description['id'],
+        # 'Model ID': model_description['id'],
         'Data ID': data_description['id'],
         'hyperparamters des': hyp_path,
         'model des': model_path,
