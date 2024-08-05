@@ -84,7 +84,7 @@ class Dataset:
         datastored = converted[(converted['Data ID'] == self.get_id()) & (converted['Pipeline ID'] == self.pipeline.get_id())]
         if len(datastored) > 0:
             print("Data Already Stored")
-            return os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'train'), os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'eval')
+            return os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'train'), os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'eval'), datastored.iloc[0]['Sampling Rate'], datastored.iloc[0]['Time Span'], datastored.iloc[0]['Total Channels']
 
         foldername = self.id + '_P' + self.pipeline.get_id()
         destdir2 = os.path.join(destdir, foldername)
@@ -97,7 +97,7 @@ class Dataset:
         newentry = pd.DataFrame([[foldername, self.get_id(), self.pipeline.get_id(), self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels]], columns=converted.columns)
         converted = pd.concat([converted, newentry], ignore_index=True)
         converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
-        return traindir, evaldir, self.pipeline.sampling_rate, self.pipeline.time_span
+        return traindir, evaldir, self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels
 
     def save_to_npz(self, destdir, div = 'train'):
         ''' Saves the data to a numpy file

@@ -25,9 +25,8 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
         history.update(results, 'val')
     return val_loss
 
-def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, scheduler=None):
+def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, scheduler=None):
     model.to(device)
-    best_val_loss = float('inf')
     model.train()
     for epoch in range(epochs):
         train_loss = 0
@@ -44,6 +43,12 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
             _, predicted = torch.max(output, 1)
             label_check = torch.argmax(target, 1)
             train_loss += loss.item()
+
+            # clearing data for space
+            del data, target, output, loss
+            if device == 'cuda':
+                torch.cuda.empty_cache()
+
             metrics.update(label_check, predicted)
         train_loss /= len(train_loader)
         results = metrics.compute()
@@ -51,11 +56,14 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         history.update(results, 'train')
         val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
         model.train()
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save(model.state_dict(), save_path)
+        earlystopping(val_loss, model)
         if scheduler:
             scheduler.step(val_loss)
+        if earlystopping.early_stop:
+            print("Early stopping")
+            break
+        if device == 'cuda':
+            torch.cuda.empty_cache()
         clear_output(wait=True)
         print(f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}', flush=True)
     model.load_state_dict(torch.load(save_path))
