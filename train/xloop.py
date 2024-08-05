@@ -4,6 +4,7 @@ import torch
 from train.train import train, evaluate
 from train.callbacks import History, def_metrics
 from datasets.dataset import Dataset
+from datasets.pytordataset import EEGDataset
 from torch.utils.data import DataLoader
 from train.misc import EarlyStopping
 from train.store import update_csv
@@ -25,8 +26,10 @@ def _calc_inputsize(s_rate, t_span, c_no):
     return (c_no, s_rate * t_span)
 
 def _get_dataloaders(traindir, evaldir, batch_size):
-    trainloader = DataLoader(traindir, batch_size=batch_size, shuffle=True)
-    evalloader = DataLoader(evaldir, batch_size=batch_size, shuffle=True)
+    traindataset = EEGDataset(traindir) 
+    evaldataset = EEGDataset(evaldir)
+    trainloader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
+    evalloader = DataLoader(evaldataset, batch_size=batch_size, shuffle=True)
     return trainloader, evalloader
 
 
