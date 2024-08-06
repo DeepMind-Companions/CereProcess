@@ -107,7 +107,7 @@ class WaveNetFull(nn.Module):
 
 
 def get_wavenet_dil():
-    return nn.Sequential(WaveNet, WaveNetEnd)
+    return nn.Sequential(WaveNet(), WaveNetEnd(64))
     
     
 
