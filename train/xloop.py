@@ -79,12 +79,15 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
 
 
     # Finally training everything
-    model_save_name = model_description['id'] + '.pt'
-    model_save_path = os.path.join(destdir, 'models', model_save_name)
+    model_save_dir = os.path.join(destdir, 'models')
+    os.makedirs(model_save_dir, exist_ok=True)
+    currmodels = os.listdir(model_save_dir)
+    model_save_name = "model_" + str(len(currmodels))
+
+    model_save_path = os.path.join(model_save_dir, model_save_name + '.pt')
     earlystopping.path = model_save_path
-    respath = os.path.join(destdir, 'results.csv')
     train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping)
-    update_csv(respath, model_description, data_description, history, hyperparameters)
+    update_csv(destdir, model_description, data_description, history, hyperparameters, model_save_name)
 
     
 
