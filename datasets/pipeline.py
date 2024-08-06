@@ -208,6 +208,8 @@ class Pipeline(Preprocess):
             new_pipeline.sampling_rate = pipeline.sampling_rate
         if (pipeline.time_span != -1):
             new_pipeline.time_span = pipeline.time_span
+        if (pipeline.channels != -1):
+            new_pipeline.channels = pipeline.channels
         return new_pipeline
 
     def func(self, data):
@@ -252,6 +254,7 @@ class MultiPipeline():
                 self.pipeline.append(pipeline)
             self.sampling_rate = sample_rate
             self.time_span = time_span
+            self.channels = channels
         self.len = len(pipelines)
         
     def __len__(self):
