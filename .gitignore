@@ -2,3 +2,6 @@ data/
 .ipynb_checkpoints
 *.npz
 __pycache__
+results
+*.pt
+*.ipynb

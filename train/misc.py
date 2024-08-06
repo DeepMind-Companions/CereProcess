@@ -6,7 +6,7 @@ from train.callbacks import History, Metrics, def_metrics
 import numpy as np
 
 class EarlyStopping:
-    def __init__(self, patience=10, delta=0, path='checkpoint.pt', verbose=False):
+    def __init__(self, patience=10, delta=0, path='checkpoint.pt', verbose=True):
         self.patience = patience
         self.delta = delta
         self.path = path

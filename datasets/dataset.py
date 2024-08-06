@@ -29,6 +29,7 @@ class Dataset:
         evallen = [len(self.evalfiles['normal']), len(self.evalfiles['abnormal'])]
         # Also getting the fullpath
         fullpath = os.path.join(datapath, basedir)
+        fullpath = fullpath.replace("/", "")
         if len(fullpath) > 10:
             fullpath = fullpath[-10:]
 
@@ -84,10 +85,10 @@ class Dataset:
         datastored = converted[(converted['Data ID'] == self.get_id()) & (converted['Pipeline ID'] == self.pipeline.get_id())]
         if len(datastored) > 0:
             print("Data Already Stored")
-            return os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'train'), os.path.join(destdir, datastored.iloc[0]['Folder Name'], 'eval'), datastored.iloc[0]['Sampling Rate'], datastored.iloc[0]['Time Span'], datastored.iloc[0]['Total Channels'], self.id + '_P' + self.pipeline.get_id()
+            return os.path.join(destdir, 'data_processed', datastored.iloc[0]['Folder Name'], 'train'), os.path.join(destdir, 'data_processed', datastored.iloc[0]['Folder Name'], 'eval'), datastored.iloc[0]['Sampling Rate'], datastored.iloc[0]['Time Span'], datastored.iloc[0]['Total Channels'], self.id + '_P' + self.pipeline.get_id()
 
-        foldername = self.id + '_P' + self.pipeline.get_id()
-        destdir2 = os.path.join(destdir, foldername)
+        foldername = 'results' + str(len(converted))
+        destdir2 = os.path.join(destdir, 'data_processed', foldername)
         print("Saving Train Data")
         traindir = self.save_to_npz(destdir2, 'train')
         print("Saving Eval Data")
