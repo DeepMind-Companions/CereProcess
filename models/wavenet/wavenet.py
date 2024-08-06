@@ -56,7 +56,7 @@ class WaveNet(nn.Module):
         self.block2 = WaveBlock(16, 32, 3, 5)
         self.block3 = WaveBlock(32, 64, 3, 3)
         self.block4 = WaveBlock(64, 64, 2, 2)
-        self.lstmblock = nn.LSTM(7, 1, 64, batch_first=True)
+        self.lstmblock = nn.LSTM(7, 64, 1, batch_first=True)
         self.dense_layer = nn.Linear(64, 2)
         torch.nn.init.xavier_uniform_(self.dense_layer.weight, gain=1.0, generator=None)
 
@@ -70,9 +70,9 @@ class WaveNet(nn.Module):
         x = F.avg_pool1d(x, 10)
         x = self.block4(x)
         x = F.avg_pool1d(x, 2)
-        x, _ = self.lstmblock(x)
-        x = x.squeeze(-1)
-        x = F.dropout(x, 0.5)
+        _, (_, x) = self.lstmblock(x)
+        x = x.squeeze(0)
+        x = F.dropout(x, 0.5, training=self.training)
         return x
 
 
@@ -84,7 +84,7 @@ class WaveNetEnd(nn.Module):
 
     def forward(self, x):
         x = self.dense_layer(x)
-        x = F.softmax(x, dim=1)
+        # x = F.softmax(x, dim=1)
         return x
 
 
