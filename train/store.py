@@ -13,13 +13,16 @@ def save_model(model, path):
     '''
     torch.save(model.state_dict(), path)
 
-def save_model_details(model_description, data_description, hyperparameters, path):
+def save_model_details(model_description, data_description, hyperparameters, path, model_save_name):
     '''
     Save the model description to the given path
     '''
-    model_path = os.path.join(path, 'model', model_description['id'] + '.pkl')
-    data_path = os.path.join(path, 'data', model_description['id'] + '.pkl')
-    hyp_path = os.path.join(path, 'hparam', model_description['id'] + '.pkl')
+    os.makedirs(os.path.join(path, 'model_info'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'data'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'hparam'), exist_ok=True)
+    model_path = os.path.join(path, 'model_info', model_save_name + '.pkl')
+    data_path = os.path.join(path, 'data', model_save_name  + '.pkl')
+    hyp_path = os.path.join(path, 'hparam', model_save_name + '.pkl')
     with open(model_path, 'wb') as file:
         pickle.dump(model_description, file)
     with open(data_path, 'wb') as file:
@@ -31,11 +34,11 @@ def save_model_details(model_description, data_description, hyperparameters, pat
 
 
 
-def df_entry(model_description, data_description, history, hyperparameters, path):
+def df_entry(model_description, data_description, history, hyperparameters, path, model_save_name):
     '''
     Return a pd series with the data to be stored
     '''
-    model_path, data_path, hyp_path = save_model_details(model_description, data_description, hyperparameters, path)
+    model_path, data_path, hyp_path = save_model_details(model_description, data_description, hyperparameters, path, model_save_name)
     res = {
         'Model Name': model_description['name'],
         # 'Model ID': model_description['id'],
@@ -44,20 +47,22 @@ def df_entry(model_description, data_description, history, hyperparameters, path
         'model des': model_path,
         'data des': data_path
         }
-    for key, value in history.items():
-        res[key] = value
+    for div in ['train', 'val']:
+        for key, value in history.history[div].items():
+            res[div + "_" + key] = value
 
     return pd.Series(res)
 
-def update_csv(path, model_description, data_description, history, hyperparameters):
+def update_csv(path, model_description, data_description, history, hyperparameters, model_save_name):
     '''
     Update the csv file with the new data
     If the csv file does not exist, it creates a new one
     '''
+    csvpath = os.path.join(path, "results.csv")
     try:
-        df = pd.read_csv(path)
+        df = pd.read_csv(csvpath)
     except FileNotFoundError:
         df = pd.DataFrame()
-    data = df_entry(model_description, data_description, history, hyperparameters, path)
-    df = df.append(data, ignore_index=True)
-    df.to_csv(path, index=False)
+    data = df_entry(model_description, data_description, history, hyperparameters, path, model_save_name)
+    df = pd.concat([df, data.to_frame().T], ignore_index=True)
+    df.to_csv(csvpath, index=False)
