@@ -12,10 +12,7 @@ from train.store import update_csv
 # def evaluate(model, val_loader, criterion, device, metrics, history):
 
 def _get_modelsummary(model, input_size):
-    try:
-        model_summary = summary(model, input_size)
-    except:
-        model_summary = model.__str__()
+    model_summary = model.__str__()
     return model_summary
 
 def _get_datasummary(datapath, basedir, pipeline):
@@ -84,6 +81,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     # Finally training everything
     model_save_name = model_description['id'] + '.pt'
     model_save_path = os.path.join(destdir, 'models', model_save_name)
+    earlystopping.path = model_save_path
     respath = os.path.join(destdir, 'results.csv')
     train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping)
     update_csv(respath, model_description, data_description, history, hyperparameters)
