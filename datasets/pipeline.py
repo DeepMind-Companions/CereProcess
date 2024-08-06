@@ -121,6 +121,17 @@ class NotchFilter(Preprocess):
     def get_id(self):
         return f'{self.__class__.__name__}_{self.freqs}'
 
+class Scale(Preprocess):
+    ''' Responsible for scaling the data by a fixed numer
+        Inputs: Raw EEG in MNE format
+        Outputs: Raw EED Data that is scaled
+    '''
+    def __init__(self, scale):
+        self.scale = scale
+
+    def func(self, data):
+        data._data *= self.scale
+
 class BipolarRef(Preprocess):
     ''' Responsible for applying a bipolar reference to the data
         Inputs: raw EEG data in MNE format
@@ -303,13 +314,14 @@ def get_wavenet_pipeline(dataset = 'TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model
     '''
     pipeline = Pipeline()
+    pipeline.add(Scale(1e6))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
     elif (dataset == 'NMT'):
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
-    pipeline.add(ClipData(100))
+    pipeline.add(ClipAbsData(100))
     pipeline.add(ResampleData(250))
     pipeline.add(CropData(0, 60))
     pipeline.add(HighPassFilter(1.0))
@@ -320,13 +332,14 @@ def get_wavenet_reverse(dataset='TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model (second min)
     '''
     pipeline = Pipeline()
+    pipeline.add(Scale(1e6))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
     elif (dataset == 'NMT'):
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
-    pipeline.add(ClipData(100))
+    pipeline.add(ClipAbsData(100))
     pipeline.add(ResampleData(250))
     pipeline.add(CropData(60, 120))
     pipeline.add(HighPassFilter(1.0))
