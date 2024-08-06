@@ -26,7 +26,7 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
     return val_loss
 
 def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, scheduler=None):
-    model.to(device)
+    model = model.to(device)
     model.train()
     for epoch in range(epochs):
         train_loss = 0
@@ -56,6 +56,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         history.update(results, 'train')
         val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
         model.train()
+        clear_output(wait=True)
         earlystopping(val_loss, model)
         if scheduler:
             scheduler.step(val_loss)
@@ -64,7 +65,8 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
             break
         if device == 'cuda':
             torch.cuda.empty_cache()
-        clear_output(wait=True)
         print(f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}', flush=True)
+        print(f'Train Accuracy: {float(history.history["train"]["accuracy"][-1]):.4f} - Val Accuracy: {float(history.history["val"]["accuracy"][-1]):.4f}', flush=True)
+        print(f'Train F1 Score: {float(history.history["train"]["f1score"][-1]):.4f} - Val F1 Score: {float(history.history["val"]["f1score"][-1]):.4f}', flush = True)
     model.load_state_dict(torch.load(save_path))
     return model
