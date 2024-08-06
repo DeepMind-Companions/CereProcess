@@ -14,7 +14,7 @@ class History:
         for key, value in metrics.items():
             if key not in self.history[train]:
                 self.history[train][key] = []
-            self.history[train][key].append(value)
+            self.history[train][key].append(float(value))
 
     def plot(self):
         # plot three metrics
