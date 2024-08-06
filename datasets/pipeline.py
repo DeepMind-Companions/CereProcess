@@ -131,6 +131,10 @@ class Scale(Preprocess):
 
     def func(self, data):
         data._data *= self.scale
+        return data
+
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.scale}'
 
 class BipolarRef(Preprocess):
     ''' Responsible for applying a bipolar reference to the data
@@ -314,7 +318,7 @@ def get_wavenet_pipeline(dataset = 'TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model
     '''
     pipeline = Pipeline()
-    pipeline.add(Scale(1e6))
+    pipeline.add(CropData(0, 60))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
@@ -323,16 +327,16 @@ def get_wavenet_pipeline(dataset = 'TUH'):
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
     pipeline.add(ClipAbsData(100))
     pipeline.add(ResampleData(250))
-    pipeline.add(CropData(0, 60))
     pipeline.add(HighPassFilter(1.0))
     pipeline.add(NotchFilter(60))
+    pipeline.add(Scale(1e6))
     return pipeline
 
 def get_wavenet_reverse(dataset='TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model (second min)
     '''
     pipeline = Pipeline()
-    pipeline.add(Scale(1e6))
+    pipeline.add(CropData(60, 120))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
@@ -341,26 +345,31 @@ def get_wavenet_reverse(dataset='TUH'):
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
     pipeline.add(ClipAbsData(100))
     pipeline.add(ResampleData(250))
-    pipeline.add(CropData(60, 120))
     pipeline.add(HighPassFilter(1.0))
     pipeline.add(NotchFilter(60))
     pipeline.add(Reverse())
+    pipeline.add(Scale(1e6))
     return pipeline
 
 def get_wavenet_pl(dataset='TUH'):
-    ''' Returns the preprocessing pipeline for the Wavenet model (third min)
+    ''' Returns the complete preprocessing pipeline for wavenet (2 pipelines combined)
     '''
     pipeline = MultiPipeline([get_wavenet_pipeline(dataset), get_wavenet_reverse(dataset)])
     return pipeline
 
-def get_scnet_pipeline():
+def get_scnet_pipeline(dataset = 'TUH'):
     '''Returns the preprocessing pipeline for SCNet Model
     '''
     pipeline = Pipeline()
-    pipeline.add(ReduceChannels())
-    pipeline.add(ResampleData(100))
     pipeline.add(CropData(60, 480))
-    pipeline.add(ClipData(100))
-    pipeline.add(BipolarRef())
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline.add(ResampleData(100))
+    pipeline.add(ClipAbsData(100))
+    pipeline.add(Scale(1e6))
     return pipeline
 
