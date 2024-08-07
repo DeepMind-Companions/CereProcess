@@ -9,12 +9,37 @@ class History:
             self.history = {"train": {}, "val": {}}
         else:
             self.history = data
+        self.best = {
+            "loss": {
+                "loss": 1000,
+            }, 
+            "accuracy": {
+                "accuracy": -1,
+            }, 
+        }
 
     def update(self, metrics, train = 'train'):
         for key, value in metrics.items():
             if key not in self.history[train]:
                 self.history[train][key] = []
             self.history[train][key].append(float(value))
+        
+        if self.best["loss"]["loss"] > float(metrics["loss"]):
+            for key, value in metrics.items():
+                self.best["loss"][key] = float(value)
+        if self.best["accuracy"]["accuracy"] < float(metrics["accuracy"]):
+            for key, value in metrics.items():
+                self.best["accuracy"][key] = float(value)
+
+    def print_best(self):
+        print("\nPrinting Best:")
+        print("Loss Wise:")
+        print(f"Best Loss: {self.best['loss']['loss']}")
+        print(self.best["loss"])
+        print(f"Best Accuracy: {self.best['accuracy']['accuracy']}")
+        print(self.best["accuracy"])
+            
+
 
     def plot(self, items = None):
         # plot three metrics
