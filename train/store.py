@@ -18,10 +18,10 @@ def save_model_details(model_description, data_description, hyperparameters, pat
     Save the model description to the given path
     '''
     os.makedirs(os.path.join(path, 'model_info'), exist_ok=True)
-    os.makedirs(os.path.join(path, 'data'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'data_info'), exist_ok=True)
     os.makedirs(os.path.join(path, 'hparam'), exist_ok=True)
     model_path = os.path.join(path, 'model_info', model_save_name + '.pkl')
-    data_path = os.path.join(path, 'data', model_save_name  + '.pkl')
+    data_path = os.path.join(path, 'data_info', model_save_name  + '.pkl')
     hyp_path = os.path.join(path, 'hparam', model_save_name + '.pkl')
     with open(model_path, 'wb') as file:
         pickle.dump(model_description, file)
