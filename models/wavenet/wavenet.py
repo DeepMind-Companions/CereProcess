@@ -109,5 +109,7 @@ class WaveNetFull(nn.Module):
 def get_wavenet_dil():
     return nn.Sequential(WaveNet(), WaveNetEnd(64))
     
+def get_wavenet_alt(input_shape):
+    return nn.Sequential(AlternateLayer(input_shape), WaveNetEnd(60))
     
 
