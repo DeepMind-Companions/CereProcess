@@ -30,11 +30,15 @@ def _get_dataloaders(traindir, evaldir, batch_size):
     return trainloader, evalloader
 
 
-def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir):
+def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir, model_name = None):
 
     # We will start by initializing the model and data description
     model_description = {}
-    model_description['name'] = model.__class__.__name__
+    if model_name is None:
+        model_description['name'] = model.__class__.__name__
+    else:
+        model_description['name'] = model_name
+
     data_description = {}
 
     # Resetting cuda for every loop
