@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from tqdm.notebook import tqdm
 from IPython.display import clear_output
 
@@ -40,6 +41,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
             loss = criterion(output, target)
             loss.backward()
             optimizer.step()
+            output = F.softmax(output, dim = -1)
             _, predicted = torch.max(output, 1)
             label_check = torch.argmax(target, 1)
             train_loss += loss.item()
