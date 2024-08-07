@@ -16,13 +16,24 @@ class History:
                 self.history[train][key] = []
             self.history[train][key].append(float(value))
 
-    def plot(self):
+    def plot(self, items = None):
         # plot three metrics
         epochs = range(1, len(self.history['val']['loss']) + 1)
         fig, axs = plt.subplots(1, 3, figsize=(15, 5))
-        for i, (key, _) in enumerate(self.history['val'].items()):
-            if (i > 2):
-                break
+       # for i, (key, _) in enumerate(self.history['val'].items()):
+       #     if (i > 2):
+       #         break
+       #     axs[i].plot(self.history['train'][key][:len(epochs)], label='train')
+       #     axs[i].plot(self.history['val'][key][:len(epochs)], label='val')
+       #     axs[i].set_title(key)
+       #     axs[i].set_xlabel('Epochs')
+       #     axs[i].legend()
+        if items is None:
+            items = ['loss', 'f1score', 'accuracy']
+        else:
+            if len(items) > 3:
+                items = items[:3]
+        for i, key in enumerate(items):
             axs[i].plot(self.history['train'][key][:len(epochs)], label='train')
             axs[i].plot(self.history['val'][key][:len(epochs)], label='val')
             axs[i].set_title(key)
