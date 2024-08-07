@@ -58,6 +58,8 @@ class TrainElements:
         if earlystopping is None:
             self.earlystopping = EarlyStopping()
 
+def get_model_size(model):
+    return sum(p.numel() for p in model.parameters())
 
 
 
