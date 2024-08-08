@@ -87,7 +87,7 @@ class CropData(Preprocess):
     def func(self, data):
         return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
     def get_id(self):
-        return f'{self.__class__.__name__}_{self.time_span}'
+        return f'{self.__class__.__name__}_{self.time_span}_{self.tmin}'
 
 class HighPassFilter(Preprocess):
     ''' Responsible for applying a high pass filter to the data
@@ -314,15 +314,21 @@ class MultiPipeline():
         return 'MULTI_' + '_'.join([pipeline.get_id() for pipeline in self.pipeline])
 
 
+def get_multi_wavenet(dataset = 'TUH'):
+    # TODO
+    return MultiPipeline()
+
+
 def get_wavenet_pipeline(dataset = 'TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model
     '''
     pipeline = Pipeline()
-    pipeline.add(CropData(0, 60))
     if (dataset == 'TUH'):
+        pipeline.add(CropData(0, 60))
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
     elif (dataset == 'NMT'):
+        pipeline.add(CropData(60, 120))
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
     pipeline.add(ClipAbsData(100))
@@ -336,11 +342,12 @@ def get_wavenet_reverse(dataset='TUH'):
     ''' Returns the preprocessing pipeline for the Wavenet model (second min)
     '''
     pipeline = Pipeline()
-    pipeline.add(CropData(60, 120))
     if (dataset == 'TUH'):
+        pipeline.add(CropData(60, 120))
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
     elif (dataset == 'NMT'):
+        pipeline.add(CropData(120, 180))
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
     pipeline.add(ClipAbsData(100))
