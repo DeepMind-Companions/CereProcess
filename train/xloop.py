@@ -59,7 +59,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
         model_description['name'] = model.__class__.__name__
     else:
         model_description['name'] = model_name
-    model_name = model_name + "_" + str(get_model_size(model))
+    model_description["size"] = str(get_model_size(model))
 
     data_description = {}
 
