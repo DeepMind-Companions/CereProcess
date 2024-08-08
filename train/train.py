@@ -9,6 +9,8 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
     val_loss = 0
     model.eval()
     metrics.reset()
+    actual = torch.tensor([]).to(device)
+    pred = torch.tensor([]).to(device)
     with torch.no_grad():
         for data, target in val_loader:
             data, target = data.to(device), target.to(device)
@@ -20,10 +22,13 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
             _, predicted = torch.max(output, 1)
             label_check = torch.argmax(target, 1)
             metrics.update(label_check, predicted)
+            actual = torch.cat([actual, label_check])
+            pred = torch.cat([pred, predicted])
         val_loss /= len(val_loader)
         results = metrics.compute()
         results.update({"loss": val_loss})
         history.update(results, 'val')
+    history.update_cm(actual.tolist(), pred.tolist())
     return val_loss
 
 def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, scheduler=None):
@@ -72,6 +77,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         print(f'Train F1 Score: {float(history.history["train"]["f1score"][-1]):.4f} - Val F1 Score: {float(history.history["val"]["f1score"][-1]):.4f}', flush = True)
         history.print_best()
         history.plot()
+        history.display_cm()
     model.load_state_dict(torch.load(save_path))
     val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
     return model

@@ -1,5 +1,6 @@
 from torchmetrics import Accuracy, Precision, Recall, F1Score
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import pickle
 
 
@@ -11,12 +12,25 @@ class History:
             self.history = data
         self.best = {
             "loss": {
-                "loss": 1000,
+                "loss": 1000.0,
             }, 
             "accuracy": {
-                "accuracy": -1,
+                "accuracy": -1.0,
             }, 
         }
+        self.cm = {
+            "actual": [],
+            "predicted": []
+        }
+    
+    def update_cm(self, actual, pred):
+        self.cm["actual"] = actual
+        self.cm["pred"] = pred
+
+    def display_cm(self):
+        conf = confusion_matrix(self.cm["actual"], self.cm["pred"])
+        cm = ConfusionMatrixDisplay(confusion_matrix=conf, display_labels=['normal', 'abnormal'])
+        cm.plot(cmap = plt.cm.Blues)
 
     def update(self, metrics, train = 'train'):
         for key, value in metrics.items():
