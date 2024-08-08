@@ -88,6 +88,31 @@ class CropData(Preprocess):
         return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
     def get_id(self):
         return f'{self.__class__.__name__}_{self.time_span}'
+    
+class PaddedCropData(Preprocess):
+    ''' Responsible for cropping the data to the specified time range.
+        If duration < tmax, flips the data, and appends the flipped data to
+        the end.
+        Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data cropped to the specified time range
+    '''
+    def __init__(self, tmin, tmax):
+        self.tmin = tmin
+        self.tmax = tmax
+        self.time_span = tmax - tmin
+    def func(self, data):
+        if data.n_times / data.info["sfreq"] >= self.tmax:
+            return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
+        else:
+            while data.n_times / data.info["sfreq"] < self.tmax:
+                data_only, _ = data[:]
+                reversed = np.flip(data_only, axis = 1)
+                info = data.info
+                data_only = np.concatenate([data_only, reversed], axis=1)
+                data = mne.io.RawArray(data_only, info)
+            return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.time_span}'
 
 class HighPassFilter(Preprocess):
     ''' Responsible for applying a high pass filter to the data
@@ -373,3 +398,18 @@ def get_scnet_pipeline(dataset = 'TUH'):
     pipeline.add(Scale(1e6))
     return pipeline
 
+def general_pipeline(dataset = 'TUH'):
+    '''Returns a general pipeline that retains most of the recording length
+    '''
+    pipeline = Pipeline()
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline.add(PaddedCropData(0, 10 * 60))
+    pipeline.add(ResampleData(200))
+    pipeline.add(HighPassFilter(l_freq=0.5, h_freq=50))
+    pipeline.add(Scale(1e6))
+    return pipeline
