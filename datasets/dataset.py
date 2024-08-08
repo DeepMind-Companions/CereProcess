@@ -149,7 +149,7 @@ class Dataset:
 
             print("Converting Abnormal Files now")
             for file in tqdm(abnormal):
-                label = [1, 0]
+                label = [0, 1]
                 try:
                     data = mne.io.read_raw_edf(file, preload=True, verbose='error')
                     for i, pipeline in enumerate(self.pipeline):
