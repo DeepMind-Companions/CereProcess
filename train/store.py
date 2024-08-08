@@ -13,23 +13,27 @@ def save_model(model, path):
     '''
     torch.save(model.state_dict(), path)
 
-def save_model_details(model_description, data_description, hyperparameters, path, model_save_name):
+def save_model_details(model_description, data_description, hyperparameters, history, path, model_save_name):
     '''
     Save the model description to the given path
     '''
     os.makedirs(os.path.join(path, 'model_info'), exist_ok=True)
     os.makedirs(os.path.join(path, 'data_info'), exist_ok=True)
     os.makedirs(os.path.join(path, 'hparam'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'history'), exist_ok=True)
     model_path = os.path.join(path, 'model_info', model_save_name + '.pkl')
     data_path = os.path.join(path, 'data_info', model_save_name  + '.pkl')
     hyp_path = os.path.join(path, 'hparam', model_save_name + '.pkl')
+    history_path = os.path.join(path, 'history', model_save_name + '.pkl')
     with open(model_path, 'wb') as file:
         pickle.dump(model_description, file)
     with open(data_path, 'wb') as file:
         pickle.dump(data_description, file)
     with open(hyp_path, 'wb') as file:
         pickle.dump(hyperparameters, file)
-    return model_path, data_path, hyp_path
+    with open(history_path, 'wb') as file:
+        pickle.dump(history, file)
+    return model_path, data_path, hyp_path, history_path
 
 
 
@@ -38,18 +42,19 @@ def df_entry(model_description, data_description, history, hyperparameters, path
     '''
     Return a pd series with the data to be stored
     '''
-    model_path, data_path, hyp_path = save_model_details(model_description, data_description, hyperparameters, path, model_save_name)
+    model_path, data_path, hyp_path, history_path = save_model_details(model_description, data_description, hyperparameters, history, path, model_save_name)
     res = {
         'Model Name': model_description['name'],
-        # 'Model ID': model_description['id'],
+        'Model ID': model_description['id'],
         'Data ID': data_description['id'],
         'hyperparamters des': hyp_path,
         'model des': model_path,
-        'data des': data_path
+        'data des': data_path,
+        'history des': history_path
         }
     for div in ['train', 'val']:
         for key, value in history.history[div].items():
-            res[div + "_" + key] = value
+            res[div + "_" + key] = value[-1]
 
     return pd.Series(res)
 

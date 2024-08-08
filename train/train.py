@@ -71,5 +71,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         print(f'Train Accuracy: {float(history.history["train"]["accuracy"][-1]):.4f} - Val Accuracy: {float(history.history["val"]["accuracy"][-1]):.4f}', flush=True)
         print(f'Train F1 Score: {float(history.history["train"]["f1score"][-1]):.4f} - Val F1 Score: {float(history.history["val"]["f1score"][-1]):.4f}', flush = True)
         history.print_best()
+        history.plot()
     model.load_state_dict(torch.load(save_path))
+    val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
     return model

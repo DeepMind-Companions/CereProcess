@@ -6,7 +6,7 @@ from train.callbacks import History, def_metrics
 from datasets.dataset import Dataset
 from datasets.pytordataset import EEGDataset
 from torch.utils.data import DataLoader
-from train.misc import EarlyStopping
+from train.misc import EarlyStopping, get_model_size
 from train.store import update_csv
 
 # def evaluate(model, val_loader, criterion, device, metrics, history):
@@ -30,6 +30,27 @@ def _get_dataloaders(traindir, evaldir, batch_size):
     return trainloader, evalloader
 
 
+def _write_counter(counter, destpath, filename='counter.txt'):
+    filename = os.path.join(destpath, filename)
+    with open(filename, 'w') as file:
+        file.write(str(counter))
+
+def _read_counter(destpath, filename='counter.txt'):
+    filename = os.path.join(destpath, filename)
+    if not os.path.exists(filename):
+        return 0  # Return a default value (e.g., 0) if the file does not exist
+    
+    with open(filename, 'r') as file:
+        content = file.read()
+        return int(content)  # or float(content) if you expect a float
+
+def _increment_counter(destpath, filename='counter.txt'):
+    filename = os.path.join(destpath, filename)
+    counter = _read_counter(destpath)
+    counter += 1
+    _write_counter(counter, destpath)
+
+
 def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir, model_name = None):
 
     # We will start by initializing the model and data description
@@ -38,6 +59,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
         model_description['name'] = model.__class__.__name__
     else:
         model_description['name'] = model_name
+    model_name = model_name + "_" + str(get_model_size(model))
 
     data_description = {}
 
@@ -86,7 +108,10 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     model_save_dir = os.path.join(destdir, 'models')
     os.makedirs(model_save_dir, exist_ok=True)
     currmodels = os.listdir(model_save_dir)
-    model_save_name = "model_" + str(len(currmodels))
+    model_save_name = "model_" + str(_read_counter(destdir))
+    _increment_counter(destdir)
+
+    model_description['id'] = model_save_name
 
     model_save_path = os.path.join(model_save_dir, model_save_name + '.pt')
     earlystopping.path = model_save_path
