@@ -24,12 +24,13 @@ class History:
                 self.history[train][key] = []
             self.history[train][key].append(float(value))
         
-        if self.best["loss"]["loss"] > float(metrics["loss"]):
-            for key, value in metrics.items():
-                self.best["loss"][key] = float(value)
-        if self.best["accuracy"]["accuracy"] < float(metrics["accuracy"]):
-            for key, value in metrics.items():
-                self.best["accuracy"][key] = float(value)
+        if train == 'val':
+            if self.best["loss"]["loss"] > float(metrics["loss"]):
+                for key, value in metrics.items():
+                    self.best["loss"][key] = float(value)
+            if self.best["accuracy"]["accuracy"] < float(metrics["accuracy"]):
+                for key, value in metrics.items():
+                    self.best["accuracy"][key] = float(value)
 
     def print_best(self):
         print("\nPrinting Best:")
