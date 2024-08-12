@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from models.wavenet.alternate import AlternateLayer
 
 class WaveLayer(nn.Module):
-    def __init__(self, in_channels, kernel_size, dilation):
+    def __init__(self, in_channels, kernel_size, dilation, bn = False):
         super(WaveLayer, self).__init__()
         self.padding = (kernel_size - 1) * dilation
         self.conv = nn.Conv1d(in_channels, in_channels, kernel_size, padding=self.padding, dilation=dilation)
@@ -12,6 +12,12 @@ class WaveLayer(nn.Module):
         self.sig = nn.Sigmoid()
         self.filter = nn.Conv1d(in_channels, in_channels, 1)
         self.gate = nn.Conv1d(in_channels, in_channels, 1)
+        self.bn = bn
+
+        if (self.bn == True):
+            self.bn1 = nn.BatchNorm1d(in_channels)
+            self.bnf = nn.BatchNorm1d(in_channels)
+            self.bng = nn.BatchNorm1d(in_channels)
 
         # Initialize weights
         torch.nn.init.xavier_uniform_(self.conv.weight, gain=1.0)
@@ -22,9 +28,15 @@ class WaveLayer(nn.Module):
         
     def forward(self, x):
         # x_padded = torch.nn.functional.pad(x, (self.padding, 0))
-        output = self.conv(x)
+        output = F.relu(self.conv(x))
+        if (self.bn):
+            output = self.bn1(output)
         filter = self.filter(output)
+        if (self.bn):
+            filter = self.bnf(filter)
         gate = self.gate(output)
+        if (self.bn):
+            gate = self.bng(gate)
         tanh = self.tanh(filter)
         sig = self.sig(gate)
         z = tanh*sig
@@ -33,30 +45,32 @@ class WaveLayer(nn.Module):
         return x
 
 class WaveBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, dilation_rates):
+    def __init__(self, in_channels, out_channels, kernel_size, dilation_rates, bn=False):
         super(WaveBlock, self).__init__()
         self.layers = nn.ModuleList()
         dilations = [2**i for i in range(dilation_rates)]
         self.conv1d = nn.Conv1d(in_channels, out_channels, 1)
         for dilation in dilations:
-            self.layers.append(WaveLayer(out_channels, kernel_size, dilation))
+            self.layers.append(WaveLayer(out_channels, kernel_size, dilation, bn))
         torch.nn.init.xavier_uniform_(self.conv1d.weight, gain=1.0, generator=None)
 
     def forward(self, x):
         x = self.conv1d(x)
+        x = F.relu(x)
         for layer in self.layers:
             x = layer(x)
         return x
 
 
 class WaveNet(nn.Module):
-    def __init__(self):
+    def __init__(self, input_shape):
         super(WaveNet, self).__init__()
-        self.block1 = WaveBlock(22, 16, 3, 8)
+        channels, features = input_shape
+        self.block1 = WaveBlock(channels, 16, 3, 8)
         self.block2 = WaveBlock(16, 32, 3, 5)
         self.block3 = WaveBlock(32, 64, 3, 3)
         self.block4 = WaveBlock(64, 64, 2, 2)
-        self.lstmblock = nn.LSTM(7, 64, 1, batch_first=True)
+        self.lstmblock = nn.LSTM(int(features/2000), 64, 1, batch_first=True)
         self.dense_layer = nn.Linear(64, 2)
         torch.nn.init.xavier_uniform_(self.dense_layer.weight, gain=1.0, generator=None)
 
