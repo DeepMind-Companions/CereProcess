@@ -41,14 +41,15 @@ class EarlyStopping:
         self.val_loss_min = val_loss
 
 class TrainElements:
-    def __init__(self, device, criterion = None, optimizer = None, history = None, metrics = None, earlystopping = None):
+    def __init__(self, device, criterion = None, optimizer = None, history = None, metrics = None, earlystopping = None, norm_elem = np.array([1, 1])):
         self.criterion = criterion
         self.optimizer = optimizer
         self.history = history
         self.metrics = metrics
         self.earlystopping = earlystopping
+        weights = np.sum(norm_elem) / (len(norm_elem) * norm_elem)
         if criterion is None:
-            self.criterion = nn.CrossEntropyLoss()
+            self.criterion = nn.CrossEntropyLoss(torch.DoubleTensor(weights).to(device))
         if optimizer is None:
             self.optimizer = optim.Adam
         if history is None:
@@ -61,6 +62,20 @@ class TrainElements:
 def get_model_size(model):
     return sum(p.numel() for p in model.parameters())
 
+def check_model(model, input_shape):
+    x = torch.randn(7, input_shape[0], input_shape[1])
+    print(f"Model Size = {get_model_size(model)}")
+    print(f"Input shape = {x.shape}")
+    x = model(x)
+    print(f"Output shape = {x.shape}")
 
 
+def def_hyp(batch_size = 32, lr = 0.0001, epochs = 50):
+    return {
+        "batch_size": batch_size,
+        "lr": lr,
+        "epochs": epochs
+            }
 
+def def_dev():
+   return torch.device("cuda" if torch.cuda.is_available() else 'cpu') 
