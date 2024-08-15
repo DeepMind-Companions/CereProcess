@@ -4,20 +4,20 @@ import torch.nn.functional as F
 from models.wavenet.wavenet import WaveBlock, WaveNet, WaveNetEnd
 
 class SCWave(nn.Module):
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, node1 = 64, node2 = 16, node3 = 32, dil1 = 3, dil2 = 2):
         super(SCWave, self).__init__()
-        self.mffm_block1 = WaveBlock(50, 64, 3, 3, True)
-        self.mffm_block2 = WaveBlock(50, 64, 3, 3, True)
-        self.mffm_block3 = WaveBlock(32, 16, 3, 2, True)
-        self.mffm_block4 = WaveBlock(32, 16, 3, 2, True)
-        self.mffm_block5 = WaveBlock(32, 32, 3, 2, True)
-        self.conv1 = nn.Conv1d(in_channels=64, out_channels=32, kernel_size=3, padding=1)
+        self.mffm_block1 = WaveBlock(50, node1, 3, dil1, True)
+        self.mffm_block2 = WaveBlock(50, node1, 3, dil1, True)
+        self.mffm_block3 = WaveBlock(node3, node2, 3, dil2, True)
+        self.mffm_block4 = WaveBlock(node3, node2, 3, dil2, True)
+        self.mffm_block5 = WaveBlock(node3, node3, 3, dil2, True)
+        self.conv1 = nn.Conv1d(in_channels=node1, out_channels=node3, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm1d(50)
-        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm1d(32)
-        self.conv3 = nn.Conv1d(in_channels=32, out_channels=32, kernel_size=3, padding=1)
-        self.bn3 = nn.BatchNorm1d(32)
-        self.fc = nn.Linear(32, 2)
+        self.conv2 = nn.Conv1d(in_channels=node2, out_channels=node3, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm1d(node3)
+        self.conv3 = nn.Conv1d(in_channels=node3, out_channels=node3, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm1d(node3)
+        self.fc = nn.Linear(node3, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
         nn.init.xavier_uniform_(self.conv2.weight)
@@ -61,14 +61,14 @@ class SCWave(nn.Module):
 
 
 class SCWaveLight(nn.Module):
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, node = 42):
         super(SCWaveLight, self).__init__()
-        self.mffm_block1 = WaveBlock(50, 42, 3, 4, True)
-        self.mffm_block2 = WaveBlock(50, 42, 3, 2, True)
-        self.conv1 = nn.Conv1d(in_channels=42, out_channels=42, kernel_size=3, padding=1)
+        self.mffm_block1 = WaveBlock(50, node, 3, 4, True)
+        self.mffm_block2 = WaveBlock(50, node, 3, 2, True)
+        self.conv1 = nn.Conv1d(in_channels=node, out_channels=node, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm1d(50)
-        self.bn2 = nn.BatchNorm1d(42)
-        self.fc = nn.Linear(42, 2)
+        self.bn2 = nn.BatchNorm1d(node)
+        self.fc = nn.Linear(node, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
         nn.init.xavier_uniform_(self.fc.weight)
