@@ -57,6 +57,9 @@ def df_entry(model_description, data_description, history, hyperparameters, path
         for key, value in history.history[div].items():
             res[div + "_" + key] = value[-1]
 
+    res["Best Val Accuracy"] = history.best["accuracy"]["accuracy"]
+    res["Best Val Loss"] = history.best["loss"]["loss"]
+
     return pd.Series(res)
 
 def update_csv(path, model_description, data_description, history, hyperparameters, model_save_name):

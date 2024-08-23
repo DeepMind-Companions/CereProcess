@@ -11,7 +11,7 @@ def get_results(destdir, clean = False):
     csvpath = os.path.join(destdir, "results.csv")
     df = pd.read_csv(csvpath)
     if (clean == True):
-        df = df.drop(["Data ID", "hyperparamters des", "model des", "data des", "history des"], axis = 1)
+        df = df.drop(["hyperparamters des", "model des", "data des", "history des"], axis = 1)
         df_decimal = df.select_dtypes(include=['float', 'int'])  # Select decimal columns
         df[df_decimal.columns] = df_decimal.round(4)
     return df

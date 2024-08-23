@@ -5,7 +5,7 @@ from torch.nn import functional as F
 class AlternateLayer(nn.Module):
     def __init__(self, input_shape):
         self.seq_len, self.input_size = input_shape
-        assert self.input_size % 30 == 0
+        assert self.input_size == 30000
         super(AlternateLayer, self).__init__()
         self.timdistLSTM = nn.LSTM(self.seq_len, 64, 1, batch_first=True)
         self.attFCN = nn.Linear(64, 64)
@@ -21,7 +21,7 @@ class AlternateLayer(nn.Module):
         x = x.flip(-1)
         batch_size, seq_len, input_dim = x.size()
         x = x.transpose(1, 2)
-        x = x.reshape(batch_size*30, int(self.input_size/30), seq_len)
+        x = x.reshape(batch_size*30, 1000, seq_len)
         _, (x, _) = self.timdistLSTM(x)
         x = x.reshape(batch_size, 30, 64)
         att = self.attFCN(x)

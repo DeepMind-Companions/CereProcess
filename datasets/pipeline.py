@@ -383,6 +383,36 @@ def get_wavenet_reverse(dataset='TUH'):
     pipeline.add(Scale(1e6))
     return pipeline
 
+def get_wavenet_large(dataset='TUH'):
+    pipeline_rev = Pipeline()
+    pipeline_rev.add(CropData(60, 360))
+    pipeline_rev.add(ResampleData(100))
+    if (dataset != 'TUH'):
+        pipeline_rev.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline_rev.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    else:
+        pipeline_rev.add(ReduceChannels())
+        pipeline_rev.add(BipolarRef())
+    pipeline_rev.add(ClipAbsData(100))
+    pipeline_rev.add(HighPassFilter(1.0))
+    pipeline_rev.add(NotchFilter(60))
+    pipeline_rev.add(Reverse())
+    pipeline_rev.add(Scale(1e6))
+    pipeline_nor = Pipeline()
+    pipeline_nor.add(CropData(300, 600))
+    pipeline_nor.add(ResampleData(100))
+    if (dataset=='TUH'):
+        pipeline_nor.add(ReduceChannels())
+        pipeline_nor.add(BipolarRef())
+    else:
+        pipeline_nor.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline_nor.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline_nor.add(ClipAbsData(100))
+    pipeline_nor.add(HighPassFilter(1.0))
+    pipeline_nor.add(NotchFilter(60))
+    pipeline_nor.add(Scale(1e6))
+    return MultiPipeline([pipeline_nor, pipeline_rev])
+
 def get_wavenet_pl(dataset='TUH'):
     ''' Returns the complete preprocessing pipeline for wavenet (2 pipelines combined)
     '''

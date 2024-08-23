@@ -1,12 +1,10 @@
-from torchsummary import summary
 import os
 import torch
-from train.train import train, evaluate
-from train.callbacks import History, def_metrics
+from train.train import train
 from datasets.dataset import Dataset
 from datasets.pytordataset import EEGDataset
 from torch.utils.data import DataLoader
-from train.misc import EarlyStopping, get_model_size
+from train.misc import get_model_size
 from train.store import update_csv
 
 # def evaluate(model, val_loader, criterion, device, metrics, history):
@@ -109,7 +107,6 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     # Finally training everything
     model_save_dir = os.path.join(destdir, 'models')
     os.makedirs(model_save_dir, exist_ok=True)
-    currmodels = os.listdir(model_save_dir)
     model_save_name = "model_" + str(_read_counter(destdir))
     _increment_counter(destdir)
 
@@ -119,6 +116,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     earlystopping.path = model_save_path
     train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping, save_best_acc=save_best_acc)
     update_csv(destdir, model_description, data_description, history, hyperparameters, model_save_name)
+    return model, train_loader, eval_loader
 
     
 
