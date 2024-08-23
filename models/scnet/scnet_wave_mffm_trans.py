@@ -5,7 +5,50 @@ torch.manual_seed(4747)
 import random
 random.seed(4747)
 
+class WaveLayer(nn.Module):
+    def __init__(self, in_channels, kernel_size, dilation):
+        super(WaveLayer, self).__init__()
+        self.padding = (kernel_size - 1) * dilation
+        self.conv = nn.Conv1d(in_channels, in_channels, kernel_size, padding=self.padding, dilation=dilation)
+        self.tanh = nn.Tanh()
+        self.sig = nn.Sigmoid()
+        self.filter = nn.Conv1d(in_channels, in_channels, 1)
+        self.gate = nn.Conv1d(in_channels, in_channels, 1)
 
+        # Initialize weights
+        torch.nn.init.xavier_uniform_(self.conv.weight, gain=1.0)
+        torch.nn.init.xavier_uniform_(self.filter.weight, gain=1.0)
+        torch.nn.init.xavier_uniform_(self.gate.weight, gain=1.0)
+       # self.skip = nn.Conv1d(out_channels, in_channels, 1)
+       # self.residual = nn.Conv1d(out_channels, in_channels, 1)
+        
+    def forward(self, x):
+        # x_padded = torch.nn.functional.pad(x, (self.padding, 0))
+        output = self.conv(x)
+        filter = self.filter(output)
+        gate = self.gate(output)
+        tanh = self.tanh(filter)
+        sig = self.sig(gate)
+        z = tanh*sig
+        z = z[:,:,:-self.padding]
+        x = x + z
+        return x
+
+class WaveBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, dilation_rates):
+        super(WaveBlock, self).__init__()
+        self.layers = nn.ModuleList()
+        dilations = [2**i for i in range(dilation_rates)]
+        self.conv1d = nn.Conv1d(in_channels, out_channels, 1)
+        for dilation in dilations:
+            self.layers.append(WaveLayer(out_channels, kernel_size, dilation))
+        torch.nn.init.xavier_uniform_(self.conv1d.weight, gain=1.0)
+
+    def forward(self, x):
+        x = self.conv1d(x)
+        for layer in self.layers:
+            x = layer(x)
+        return x
 
 class MFFMBlock(nn.Module):
     def __init__(self, in_channels):
@@ -25,20 +68,21 @@ class MFFMBlock(nn.Module):
         x2 = F.relu(self.bn2(self.conv2(x1)))
         return torch.cat((x2, x1), dim=1)
 
-class SCNet(nn.Module):
+class SCNetWaveMFFMTrans(nn.Module):
     def __init__(self, input_shape):
-        super(SCNet, self).__init__()
+        super(SCNetWaveMFFMTrans, self).__init__()
         self.mffm_block1 = MFFMBlock(50)
-        self.mffm_block2 = MFFMBlock(50)
+        self.wave_block1 = WaveBlock(50, 74, 3, 5)
+        self.mffm_block2 = MFFMBlock(32)
+        self.wave_block2 = WaveBlock(32, 56, 3, 3)
         self.mffm_block3 = MFFMBlock(32)
-        self.mffm_block4 = MFFMBlock(32)
-        self.mffm_block5 = MFFMBlock(32)
         self.conv1 = nn.Conv1d(in_channels=74, out_channels=32, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm1d(50)
         self.conv2 = nn.Conv1d(in_channels=56, out_channels=32, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm1d(32)
         self.conv3 = nn.Conv1d(in_channels=56, out_channels=32, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm1d(32)
+        self.encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(32, 4, dropout=0.5, batch_first=True) , 1)
         self.fc = nn.Linear(32, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
@@ -59,7 +103,7 @@ class SCNet(nn.Module):
         x = torch.cat((x1, x2), dim=1)
         x = self.bn1(x)
         x1 = self.mffm_block1(x)
-        x2 = self.mffm_block2(x)
+        x2 = self.wave_block1(x)
         x = x1 + x2
 
         #Apply spatial dropout
@@ -69,13 +113,16 @@ class SCNet(nn.Module):
         
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = F.relu(self.bn2(self.conv1(x)))
-        x1 = self.mffm_block3(x)
-        x2 = self.mffm_block4(x)
+        x1 = self.mffm_block2(x)
+        x2 = self.wave_block2(x)
         x = x1 + x2
         x = self.bn3(self.conv2(x))
-        x = self.mffm_block5(x)
+        x = self.mffm_block3(x)
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = self.conv3(x)
+        x = x.permute(0, 2, 1)
+        x = self.encoder(x)
+        x = x.permute(0, 2, 1)
         x = torch.mean(x, dim=2)
         x = self.fc(x)
         # return F.softmax(x, dim=-1)

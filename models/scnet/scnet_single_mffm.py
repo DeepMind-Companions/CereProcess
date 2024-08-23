@@ -25,9 +25,9 @@ class MFFMBlock(nn.Module):
         x2 = F.relu(self.bn2(self.conv2(x1)))
         return torch.cat((x2, x1), dim=1)
 
-class SCNet(nn.Module):
+class SCNetSingleMFFM(nn.Module):
     def __init__(self, input_shape):
-        super(SCNet, self).__init__()
+        super(SCNetSingleMFFM, self).__init__()
         self.mffm_block1 = MFFMBlock(50)
         self.mffm_block2 = MFFMBlock(50)
         self.mffm_block3 = MFFMBlock(32)
@@ -58,9 +58,9 @@ class SCNet(nn.Module):
         x2 = F.max_pool1d(x, kernel_size=2, stride=2)
         x = torch.cat((x1, x2), dim=1)
         x = self.bn1(x)
-        x1 = self.mffm_block1(x)
-        x2 = self.mffm_block2(x)
-        x = x1 + x2
+        x = self.mffm_block1(x)
+        # x2 = self.mffm_block2(x)
+        # x = x1 + x2
 
         #Apply spatial dropout
         x = x.permute(0, 2, 1)
@@ -69,9 +69,9 @@ class SCNet(nn.Module):
         
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = F.relu(self.bn2(self.conv1(x)))
-        x1 = self.mffm_block3(x)
-        x2 = self.mffm_block4(x)
-        x = x1 + x2
+        x = self.mffm_block3(x)
+        # x2 = self.mffm_block4(x)
+        # x = x1 + x2
         x = self.bn3(self.conv2(x))
         x = self.mffm_block5(x)
         x = F.max_pool1d(x, kernel_size=2, stride=2)

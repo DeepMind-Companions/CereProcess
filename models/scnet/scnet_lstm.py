@@ -25,9 +25,9 @@ class MFFMBlock(nn.Module):
         x2 = F.relu(self.bn2(self.conv2(x1)))
         return torch.cat((x2, x1), dim=1)
 
-class SCNet(nn.Module):
+class SCNetLSTM(nn.Module):
     def __init__(self, input_shape):
-        super(SCNet, self).__init__()
+        super(SCNetLSTM, self).__init__()
         self.mffm_block1 = MFFMBlock(50)
         self.mffm_block2 = MFFMBlock(50)
         self.mffm_block3 = MFFMBlock(32)
@@ -39,6 +39,7 @@ class SCNet(nn.Module):
         self.bn2 = nn.BatchNorm1d(32)
         self.conv3 = nn.Conv1d(in_channels=56, out_channels=32, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm1d(32)
+        self.lstmblock = nn.LSTM(5250, 32, 1, batch_first=True)
         self.fc = nn.Linear(32, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
@@ -76,7 +77,12 @@ class SCNet(nn.Module):
         x = self.mffm_block5(x)
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = self.conv3(x)
-        x = torch.mean(x, dim=2)
+        # x = F.max_pool1d(x, kernel_size=10, stride=10)
+        x, _ = self.lstmblock(x)
+        x = x[:,-1,:]
+
+        # x = torch.mean(x, dim=2)
         x = self.fc(x)
+                    
         # return F.softmax(x, dim=-1)
         return x

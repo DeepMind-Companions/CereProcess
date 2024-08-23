@@ -31,7 +31,7 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
     history.update_cm(actual.tolist(), pred.tolist())
     return val_loss
 
-def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, scheduler=None):
+def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, scheduler=None, save_best_acc=False):
     model = model.to(device)
     model.train()
     for epoch in range(epochs):
@@ -64,12 +64,20 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
         model.train()
         clear_output(wait=True)
-        earlystopping(val_loss, model)
-        if scheduler:
-            scheduler.step(val_loss)
-        if earlystopping.early_stop:
-            print("Early stopping")
-            break
+        if save_best_acc:
+            earlystopping(history.history["val"]["accuracy"][-1], model, save_best_acc=True)
+            if scheduler:
+                scheduler.step(val_loss)
+            if earlystopping.early_stop:
+                print("Early stopping")
+                break 
+        else:
+            earlystopping(val_loss, model)
+            if scheduler:
+                scheduler.step(val_loss)
+            if earlystopping.early_stop:
+                print("Early stopping")
+                break
         if device == 'cuda':
             torch.cuda.empty_cache()
         print(f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}', flush=True)

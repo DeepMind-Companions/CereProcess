@@ -26,7 +26,7 @@ def _get_dataloaders(traindir, evaldir, batch_size):
     traindataset = EEGDataset(traindir) 
     evaldataset = EEGDataset(evaldir)
     trainloader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
-    evalloader = DataLoader(evaldataset, batch_size=batch_size, shuffle=True)
+    evalloader = DataLoader(evaldataset, batch_size=batch_size, shuffle=False)
     return trainloader, evalloader
 
 
@@ -51,7 +51,7 @@ def _increment_counter(destpath, filename='counter.txt'):
     _write_counter(counter, destpath)
 
 
-def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir, model_name = None):
+def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir, model_name = None, save_best_acc = False):
 
     # We will start by initializing the model and data description
     model_description = {}
@@ -84,6 +84,8 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     datadir = os.path.join(destdir, 'data')
     traindir, evaldir, s_rate, t_span, c_no, data_id = dataset.save_all(datadir)
     if (input_size != _calc_inputsize(s_rate, t_span, c_no)):
+        print("Input Size given: ", input_size)
+        print("Calculated: ", _calc_inputsize(s_rate, t_span, c_no))
         raise ValueError("Input Size Mismatch")
 
     # Adding the data description
@@ -115,7 +117,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
 
     model_save_path = os.path.join(model_save_dir, model_save_name + '.pt')
     earlystopping.path = model_save_path
-    train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping)
+    train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping, save_best_acc=save_best_acc)
     update_csv(destdir, model_description, data_description, history, hyperparameters, model_save_name)
 
     

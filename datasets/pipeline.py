@@ -89,7 +89,7 @@ class CropData(Preprocess):
     def get_id(self):
         return f'{self.__class__.__name__}_{self.time_span}_{self.tmin}'
     
-class PaddedCropData(Preprocess):
+class PaddedCropData(CropData):
     ''' Responsible for cropping the data to the specified time range.
         If duration < tmax, flips the data, and appends the flipped data to
         the end.
@@ -228,7 +228,7 @@ class Pipeline(Preprocess):
         '''
         if (func.__class__.__name__ == 'ResampleData'):
             self.sampling_rate = func.sample_rate
-        if (func.__class__.__name__ == 'CropData'):
+        if (func.__class__.__name__ in ['CropData', 'PaddedCropData']):
             self.time_span = func.time_span
         if (func.__class__.__name__ == 'ReduceChannels'):
             self.channels = len(func.channels)
@@ -415,8 +415,24 @@ def general_pipeline(dataset = 'TUH'):
     elif (dataset == 'NMT'):
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
-    pipeline.add(PaddedCropData(0, 10 * 60))
-    pipeline.add(ResampleData(200))
     pipeline.add(HighPassFilter(l_freq=0.5, h_freq=50))
+    pipeline.add(ResampleData(200))
+    pipeline.add(PaddedCropData(0, 10 * 60))
+    pipeline.add(Scale(1e6))
+    return pipeline
+
+def general_pipeline_downsampled(dataset = 'TUH'):
+    '''Returns a general pipeline that retains most of the recording length
+    '''
+    pipeline = Pipeline()
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline.add(HighPassFilter(l_freq=0.5, h_freq=50))
+    pipeline.add(ResampleData(100))
+    pipeline.add(PaddedCropData(0, 10 * 60))
     pipeline.add(Scale(1e6))
     return pipeline
