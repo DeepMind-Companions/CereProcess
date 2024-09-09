@@ -69,12 +69,13 @@ class MFFMBlock(nn.Module):
         return torch.cat((x2, x1), dim=1)
 
 class SCNetWaveMFFMTrans(nn.Module):
-    def __init__(self, input_shape):
+    def __init__(self, dilA, dilB, dropA, dropB, enc_layers, num_heads):
+        self.dropA = dropA
         super(SCNetWaveMFFMTrans, self).__init__()
         self.mffm_block1 = MFFMBlock(50)
-        self.wave_block1 = WaveBlock(50, 74, 3, 5)
+        self.wave_block1 = WaveBlock(50, 74, 3, dilA)
         self.mffm_block2 = MFFMBlock(32)
-        self.wave_block2 = WaveBlock(32, 56, 3, 3)
+        self.wave_block2 = WaveBlock(32, 56, 3, dilB)
         self.mffm_block3 = MFFMBlock(32)
         self.conv1 = nn.Conv1d(in_channels=74, out_channels=32, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm1d(50)
@@ -82,7 +83,7 @@ class SCNetWaveMFFMTrans(nn.Module):
         self.bn2 = nn.BatchNorm1d(32)
         self.conv3 = nn.Conv1d(in_channels=56, out_channels=32, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm1d(32)
-        self.encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(32, 4, dropout=0.5, batch_first=True) , 1)
+        self.encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(32, num_heads, dropout=dropB, batch_first=True) , enc_layers)
         self.fc = nn.Linear(32, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
@@ -108,7 +109,7 @@ class SCNetWaveMFFMTrans(nn.Module):
 
         #Apply spatial dropout
         x = x.permute(0, 2, 1)
-        x = F.dropout2d(x, 0.5, training=self.training)
+        x = F.dropout2d(x, self.dropA, training=self.training)
         x = x.permute(0, 2, 1)
         
         x = F.max_pool1d(x, kernel_size=2, stride=2)

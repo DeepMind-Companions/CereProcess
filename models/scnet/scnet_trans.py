@@ -39,7 +39,7 @@ class SCNetTrans(nn.Module):
         self.bn2 = nn.BatchNorm1d(32)
         self.conv3 = nn.Conv1d(in_channels=56, out_channels=32, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm1d(32)
-        self.encoder_layer = nn.TransformerEncoderLayer(32, 1, dropout=0.5, batch_first=True) 
+        self.encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(32, 4, dropout=0.3, batch_first=True) , 1)
         self.fc = nn.Linear(32, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
@@ -65,7 +65,7 @@ class SCNetTrans(nn.Module):
 
         #Apply spatial dropout
         x = x.permute(0, 2, 1)
-        x = F.dropout2d(x, 0.5, training=self.training)
+        x = F.dropout2d(x, 0.3, training=self.training)
         x = x.permute(0, 2, 1)
         
         x = F.max_pool1d(x, kernel_size=2, stride=2)
@@ -78,7 +78,7 @@ class SCNetTrans(nn.Module):
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = self.conv3(x)
         x = x.permute(0, 2, 1)
-        x = self.encoder_layer(x)
+        x = self.encoder(x)
         x = x.permute(0, 2, 1)
         x = torch.mean(x, dim=2)
         x = self.fc(x)
