@@ -25,25 +25,9 @@ class MFFMBlock(nn.Module):
         x2 = F.relu(self.bn2(self.conv2(x1)))
         return torch.cat((x2, x1), dim=1)
 
-class SILM(nn.Module):
-    def __init__(self):
-        super(SILM, self).__init__()
-
-    def forward(self, x):
-        gap = torch.mean(x, dim=1, keepdim=True)
-        gsp = torch.std(x, dim=1, keepdim=True)
-        gmp, _ = torch.max(x, dim=1, keepdim=True)
-        gap = F.dropout(gap, 0.05, training=self.training)
-        gmp = F.dropout(gmp, 0.05, training=self.training)
-        gsp = F.dropout(gsp, 0.05, training=self.training)
-        x = torch.cat((x, gap, gsp, gmp), dim=1)
-        return x
-        
-
-class SCNet(nn.Module):
+class SCNetLSTM(nn.Module):
     def __init__(self, input_shape):
-        super(SCNet, self).__init__()
-        self.silm = SILM()
+        super(SCNetLSTM, self).__init__()
         self.mffm_block1 = MFFMBlock(50)
         self.mffm_block2 = MFFMBlock(50)
         self.mffm_block3 = MFFMBlock(32)
@@ -55,6 +39,7 @@ class SCNet(nn.Module):
         self.bn2 = nn.BatchNorm1d(32)
         self.conv3 = nn.Conv1d(in_channels=56, out_channels=32, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm1d(32)
+        self.lstmblock = nn.LSTM(5250, 32, 1, batch_first=True)
         self.fc = nn.Linear(32, 2)
 
         nn.init.xavier_uniform_(self.conv1.weight)
@@ -63,7 +48,13 @@ class SCNet(nn.Module):
         nn.init.xavier_uniform_(self.fc.weight)
 
     def forward(self, x):
-        x = self.silm(x)
+        gap = torch.mean(x, dim=1, keepdim=True)
+        gsp = torch.std(x, dim=1, keepdim=True)
+        gmp, _ = torch.max(x, dim=1, keepdim=True)
+        gap = F.dropout(gap, 0.05, training=self.training)
+        gmp = F.dropout(gmp, 0.05, training=self.training)
+        gsp = F.dropout(gsp, 0.05, training=self.training)
+        x = torch.cat((x, gap, gsp, gmp), dim=1)
         x1 = F.avg_pool1d(x, kernel_size=2, stride=2)
         x2 = F.max_pool1d(x, kernel_size=2, stride=2)
         x = torch.cat((x1, x2), dim=1)
@@ -86,7 +77,12 @@ class SCNet(nn.Module):
         x = self.mffm_block5(x)
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = self.conv3(x)
-        x = torch.mean(x, dim=2)
+        # x = F.max_pool1d(x, kernel_size=10, stride=10)
+        x, _ = self.lstmblock(x)
+        x = x[:,-1,:]
+
+        # x = torch.mean(x, dim=2)
         x = self.fc(x)
+                    
         # return F.softmax(x, dim=-1)
         return x

@@ -2,6 +2,7 @@ import os
 import pickle
 import pandas as pd
 from train.callbacks import History
+pd.set_option("display.max_rows", None)
 
 
 def get_results(destdir, clean = False):
