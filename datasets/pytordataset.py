@@ -86,6 +86,12 @@ def get_datasets(train_dir, val_dir, shuffle = 0):
         train_labels = [label for label in annotations_train.iloc[:, 1]]
         val_files = [os.path.join(val_dir, file) for file in annotations_val.iloc[:, 0]]
         val_labels = [label for label in annotations_val.iloc[:, 1]]
+        # Counting the number of eval abnormal files
+        abnormal_count = 0
+        for label in val_labels:
+            if label == 1:
+                abnormal_count += 1
+
         val_len = len(val_files)
 
         # add train and val together
@@ -97,14 +103,34 @@ def get_datasets(train_dir, val_dir, shuffle = 0):
         train_files = [train_files[i] for i in idx]
         train_labels = [train_labels[i] for i in idx]
 
-        # Split train and val
-        val_files = train_files[:val_len]
-        val_labels = train_labels[:val_len]
-        train_files = train_files[val_len:]
-        train_labels = train_labels[val_len:]
+        # Split train and val with same ratio of abnormal files
+        val_files = []
+        val_labels = []
+        tr_files = []
+        tr_labels = []
+        for i in range(len(train_labels)):
+            if train_labels[i] == 1:
+                if (abnormal_count > 0):
+                    abnormal_count -= 1
+                    val_files.append(train_files[i])
+                    val_labels.append(train_labels[i])
+                    val_len -= 1
+                else:
+                    tr_files.append(train_files[i])
+                    tr_labels.append(train_labels[i])
+            else:
+                if (val_len == 0):
+                    tr_files.append(train_files[i])
+                    tr_labels.append(train_labels[i])
+                else:
+                    val_files.append(train_files[i])
+                    val_labels.append(train_labels[i])
+                    val_len -= 1
+
+
         
         # Train and val dataset separately now
-        train_dataset = EEGDatasetS(train_files, train_labels)
+        train_dataset = EEGDatasetS(tr_files, tr_labels)
         val_dataset = EEGDatasetS(val_files, val_labels)
 
     return train_dataset, val_dataset
