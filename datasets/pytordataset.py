@@ -93,6 +93,7 @@ def get_datasets(train_dir, val_dir, shuffle = 0):
                 abnormal_count += 1
 
         val_len = len(val_files)
+        normal_count = val_len - abnormal_count
 
         # add train and val together
         train_files.extend(val_files)
@@ -111,21 +112,20 @@ def get_datasets(train_dir, val_dir, shuffle = 0):
         for i in range(len(train_labels)):
             if train_labels[i] == 1:
                 if (abnormal_count > 0):
-                    abnormal_count -= 1
                     val_files.append(train_files[i])
                     val_labels.append(train_labels[i])
-                    val_len -= 1
+                    abnormal_count -= 1
                 else:
                     tr_files.append(train_files[i])
                     tr_labels.append(train_labels[i])
             else:
-                if (val_len == 0):
+                if (normal_count <= 0):
                     tr_files.append(train_files[i])
                     tr_labels.append(train_labels[i])
                 else:
                     val_files.append(train_files[i])
                     val_labels.append(train_labels[i])
-                    val_len -= 1
+                    normal_count -= 1
 
 
         
