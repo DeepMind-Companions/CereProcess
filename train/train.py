@@ -20,6 +20,7 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
             output = model(data)
             loss = criterion(output, target)
             val_loss += loss.item()
+            output = F.softmax(output, dim = -1)
             _, predicted = torch.max(output, 1)
             label_check = torch.argmax(target, 1)
             metrics.update(label_check, predicted)
