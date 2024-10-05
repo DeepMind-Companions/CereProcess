@@ -32,7 +32,7 @@ class EEGDataset(Dataset):
             label = torch.tensor([1, 0])
         else:
             label = torch.tensor([0, 1])
-        return eeg, label
+        return eeg, label, eeg_name
 
 
 class EEGDatasetS(Dataset):
@@ -60,7 +60,7 @@ class EEGDatasetS(Dataset):
             label = torch.tensor([1, 0])
         else:
             label = torch.tensor([0, 1])
-        return eeg, label
+        return eeg, label, eeg_name
 
 def get_datasets(train_dir, val_dir, shuffle = 0):
     if (shuffle == 0):

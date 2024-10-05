@@ -1,6 +1,7 @@
 from torchmetrics import Accuracy, Precision, Recall, F1Score
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import torch
 import pickle
 
 
@@ -18,10 +19,95 @@ class History:
                 "accuracy": -1.0,
             }, 
         }
+        self.file_preds = []
         self.cm = {
             "actual": [],
             "predicted": []
         }
+
+    def new_file_preds(self):
+        self.file_preds.append([])
+
+    def update_file_preds(self, file, target, output):
+        self.file_preds[-1].append((file, target, output))
+
+    def get_file_preds(self):
+        result = {
+            "FP":[],
+            "FN":[],
+            "TP":[],
+            "TN":[]
+        }
+        for file, target, output in self.file_preds[-1]:
+            if torch.argmax(target) == 1:
+                if torch.argmax(output) == 1:
+                    result["TP"].append((file, target, output))
+                else:
+                    result["FN"].append((file, target, output))
+            else:
+                if torch.argmax(output) == 1:
+                    result["FP"].append((file, target, output))
+                else:
+                    result["TN"].append((file, target, output))
+        
+        return result
+
+    def _update_confidence(self, file, result, confidence):
+        if result <= 0.2:
+            confidence[0].append(file)
+        elif result <= 0.4:
+            confidence[1].append(file)
+        elif result <= 0.6:
+            confidence[2].append(file)
+        elif result <= 0.8:
+            confidence[3].append(file)
+        else:
+            confidence[4].append(file)
+
+
+    def get_confidence(self, typ="ALL"):
+        result = self.get_file_preds()
+        # Divide the results into confidence rate of 20%
+        # 0-20% 20-40% 40-60% 60-80% 80-100%
+        # TP, FP, TN, FN
+        confidence = {
+            "TP": [[], [], [], [], []],
+            "FP": [[], [], [], [], []],
+            "TN": [[], [], [], [], []],
+            "FN": [[], [], [], [], []]
+        }
+        # TP
+        for file, _, output in result["TP"]:
+            clss = torch.max(output)
+            self._update_confidence(file, clss, confidence["TP"])
+        for file, _, output in result["TN"]:
+            clss = torch.max(output)
+            self._update_confidence(file, clss, confidence["TN"])
+        for file, _, output in result["FP"]:
+            clss = torch.max(output)
+            self._update_confidence(file, clss, confidence["FP"])
+        for file, _, output in result["FN"]:
+            clss = torch.max(output)
+            self._update_confidence(file, clss, confidence["FN"])
+
+        if (typ == "ALL"):
+            return confidence
+        else:
+            try:
+                return confidence[typ]
+            except:
+                raise ValueError("Invalid type")
+
+    def plot_confidence(self, typ):
+        confidence = self.get_confidence()
+        counts = [len(category) for category in confidence[typ]]
+        categories = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%']
+        plt.bar(categories, counts)
+        # Add titles and labels
+        plt.title('Number of Files by Confidence Level')
+        plt.xlabel('Confidence Range')
+        plt.ylabel('Number of Files')
+        plt.show()
     
     def update_cm(self, actual, pred):
         self.cm["actual"] = actual
@@ -56,6 +142,7 @@ class History:
             
 
 
+
     def plot(self, items = None):
         # plot three metrics
         epochs = range(1, len(self.history['val']['loss']) + 1)
@@ -83,7 +170,7 @@ class History:
         
     def save(self, path):
         with open(path, 'wb') as file:
-            pickle.dump(self.history, file)
+            pickle.dump(self, file)
 
 
 

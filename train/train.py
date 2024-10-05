@@ -9,10 +9,11 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
     val_loss = 0
     model.eval()
     metrics.reset()
+    history.new_file_preds()
     actual = torch.tensor([]).to(device)
     pred = torch.tensor([]).to(device)
     with torch.no_grad():
-        for data, target in val_loader:
+        for data, target, file in val_loader:
             data, target = data.to(device), target.to(device)
             target = target.float()
             data = data.float()
@@ -22,6 +23,10 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
             _, predicted = torch.max(output, 1)
             label_check = torch.argmax(target, 1)
             metrics.update(label_check, predicted)
+
+            for idx in range(len(file)):
+                history.update_file_preds(file[idx], target[idx], output[idx])
+
             actual = torch.cat([actual, label_check])
             pred = torch.cat([pred, predicted])
         val_loss /= len(val_loader)
@@ -37,7 +42,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
     for epoch in range(epochs):
         train_loss = 0
         metrics.reset()
-        for data, target in tqdm(train_loader):
+        for data, target, _ in tqdm(train_loader):
             data, target = data.to(device), target.to(device)
             data = data.float()
             target = target.float()
