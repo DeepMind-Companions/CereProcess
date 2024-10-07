@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import torch
 import pickle
+import os
 
+def get_edf_file(file, path):
+    # remove .npz and replace with .edf from file
+    file = file.replace('.npz', '.edf')
+    return os.path.join(path, file)
 
 class History:
     def __init__(self, data=None):
