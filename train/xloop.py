@@ -2,7 +2,7 @@ import os
 import torch
 from train.train import train
 from datasets.dataset import Dataset
-from datasets.pytordataset import EEGDataset
+from datasets.pytordataset import get_datasets
 from torch.utils.data import DataLoader
 from train.misc import get_model_size
 from train.store import update_csv
@@ -20,9 +20,8 @@ def _get_datasummary(datapath, basedir, pipeline):
 def _calc_inputsize(s_rate, t_span, c_no):
     return (c_no, s_rate * t_span)
 
-def _get_dataloaders(traindir, evaldir, batch_size):
-    traindataset = EEGDataset(traindir) 
-    evaldataset = EEGDataset(evaldir)
+def _get_dataloaders(traindir, evaldir, batch_size, shuffle_seed = 0):
+    traindataset, evaldataset = get_datasets(traindir, evaldir, shuffle_seed)
     trainloader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
     evalloader = DataLoader(evaldataset, batch_size=batch_size, shuffle=False)
     return trainloader, evalloader
@@ -49,7 +48,7 @@ def _increment_counter(destpath, filename='counter.txt'):
     _write_counter(counter, destpath)
 
 
-def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir, model_name = None, save_best_acc = False):
+def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparameters, trainelements, destdir, model_name = None, save_best_acc = False, dataset_seed = 0):
 
     # We will start by initializing the model and data description
     model_description = {}
@@ -99,7 +98,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     model_description['id'] = model.__class__.__name__ + '_' + data_id
 
     # Checking if the input size is correct
-    train_loader, eval_loader = _get_dataloaders(traindir, evaldir, hyperparameters['batch_size'])
+    train_loader, eval_loader = _get_dataloaders(traindir, evaldir, hyperparameters['batch_size'], dataset_seed)
     optimizer = trainelements.optimizer(model.parameters(), lr=hyperparameters['lr'])
 
 

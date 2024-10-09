@@ -146,6 +146,30 @@ class NotchFilter(Preprocess):
     def get_id(self):
         return f'{self.__class__.__name__}_{self.freqs}'
 
+class ArtifactRemoval(Preprocess):
+    ''' Responsible for applying artifact removal to the data
+        Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data with a ICA applied
+    '''
+    def __init__(self, threshold):
+        self.threshold = threshold
+    def func(self, data):
+        montage =  mne.channels.make_standard_montage('standard_1020')
+        data.set_montage(montage, match_case=False,verbose=False)
+       
+        ica = mne.preprocessing.ICA(method="picard", max_iter="auto", random_state=56,verbose=False)
+        ica.fit(data,verbose=False)
+
+        muscle_idx_auto, scores = ica.find_bads_muscle(data,verbose=False)
+        badIndexes = np.where(np.array(scores) > np.median(scores)*self.threshold)[0].tolist()
+        
+        ica.exclude = badIndexes
+    # print(f"Automatically found muscle artifact ICA components: {badIndexes}")
+        ica.apply(data,verbose=False)
+        return data
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.threshold}'
+    
 class Scale(Preprocess):
     ''' Responsible for scaling the data by a fixed numer
         Inputs: Raw EEG in MNE format
