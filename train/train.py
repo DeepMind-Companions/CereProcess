@@ -31,26 +31,28 @@ def evaluate(model, val_loader, criterion, device, metrics, history):
     history.update_cm(actual.tolist(), pred.tolist())
     return val_loss
 
-def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, scheduler=None, save_best_acc=False):
+def train(model, train_loader, val_loader, optimizer, criterion, epochs, history, metrics, device, save_path, earlystopping, accum_iter = 1, scheduler=None, save_best_acc=False):
     model = model.to(device)
     model.train()
     for epoch in range(epochs):
         train_loss = 0
         metrics.reset()
+        batch_idx = 0
         for data, target in tqdm(train_loader):
             data, target = data.to(device), target.to(device)
             data = data.float()
             target = target.float()
-            optimizer.zero_grad()
             output = model(data)
             loss = criterion(output, target)
             loss.backward()
-            optimizer.step()
+            if ((batch_idx + 1) % accum_iter == 0) or (batch_idx + 1 == len(train_loader)):
+                optimizer.step()
+                optimizer.zero_grad()
             output = F.softmax(output, dim = -1)
             _, predicted = torch.max(output, 1)
             label_check = torch.argmax(target, 1)
             train_loss += loss.item()
-
+            batch_idx += 1
             # clearing data for space
             del data, target, output, loss
             if device == 'cuda':

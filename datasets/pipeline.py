@@ -175,6 +175,21 @@ class BipolarRef(Preprocess):
         data.drop_channels(ch_names=self.channels)   
         return data 
 
+class MinMax(Preprocess):
+    '''Reponsible for performing channel specific
+    min-max normalization.
+    '''
+    def func(self, data):
+        data_only, _ = data[:]
+
+        min_vals = np.min(data_only, axis=1, keepdims=True)
+        max_vals = np.max(data_only, axis=1, keepdims=True)
+
+        normed = (data_only - min_vals) / (max_vals - min_vals + np.finfo(float).eps)
+        info = data.info
+        out = mne.io.RawArray(normed,  info, verbose='error')
+        return out
+
 
 class Reverse(Preprocess):
     ''' Responsible for reversing the data
@@ -433,6 +448,42 @@ def get_scnet_pipeline(dataset = 'TUH'):
     pipeline.add(ResampleData(100))
     pipeline.add(ClipAbsData(100))
     pipeline.add(Scale(1e6))
+    return pipeline
+
+def get_scnet_pipeline_nmt(dataset = 'TUH'):
+    '''Returns the preprocessing pipeline for SCNet Model
+    '''
+    pipeline = Pipeline()
+    pipeline.add(CropData(60, 480))
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline.add(HighPassFilter(l_freq=0.5, h_freq=60))
+    pipeline.add(ResampleData(100))
+    pipeline.add(ClipAbsData(100))
+    pipeline.add(Scale(1e8))
+    pipeline.add(MinMax())
+    return pipeline
+
+def get_scnet_pipeline_tuh(dataset = 'TUH'):
+    '''Returns the preprocessing pipeline for SCNet Model
+    '''
+    pipeline = Pipeline()
+    pipeline.add(CropData(60, 480))
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline.add(HighPassFilter(l_freq=0.5, h_freq=60))
+    pipeline.add(ResampleData(100))
+    pipeline.add(ClipAbsData(100))
+    pipeline.add(MinMax())
+    pipeline.add(Scale(1e4))
     return pipeline
 
 def general_pipeline(dataset = 'TUH'):

@@ -78,11 +78,12 @@ def check_model(model, input_shape):
     print(f"Output shape = {x.shape}")
 
 
-def def_hyp(batch_size = 32, lr = 0.0001, epochs = 50):
+def def_hyp(batch_size = 32, lr = 0.0001, epochs = 50, accum_iter = 1):
     return {
         "batch_size": batch_size,
         "lr": lr,
-        "epochs": epochs
+        "epochs": epochs,
+        "accum_iter": accum_iter
             }
 
 def def_dev():

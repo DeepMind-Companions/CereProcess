@@ -108,9 +108,9 @@ class SCNetWaveMFFMTrans(nn.Module):
         x = x1 + x2
 
         #Apply spatial dropout
-        x = x.permute(0, 2, 1)
+        # x = x.permute(0, 2, 1)
         x = F.dropout2d(x, self.dropA, training=self.training)
-        x = x.permute(0, 2, 1)
+        # x = x.permute(0, 2, 1)
         
         x = F.max_pool1d(x, kernel_size=2, stride=2)
         x = F.relu(self.bn2(self.conv1(x)))
