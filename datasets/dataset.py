@@ -11,6 +11,17 @@ from .getfiles import get_files
 from .pipeline import Pipeline, MultiPipeline
 from datetime import datetime
 
+
+
+
+"""
+    V2: Important changes in term of modularity to the dataset class.
+    - Very important to make the dataset more modular for usage in different forms.
+    - Attempt to make V2 cross-compatible with V1 of the dataset class
+    - V2 is important in order to apply efficient cross-validation
+    - V2 additional features include having the option to divide data into both training
+        and eval splits or just one of them
+"""
 class Dataset:
     ''' Dataset class stores the EEG data, defining a preprocessing pipeline and converting it to other forms accordingly.
         Keeps Data in EEG format and then converts it to other forms
@@ -89,10 +100,9 @@ class Dataset:
 
         foldername = 'results' + str(len(converted))
         destdir2 = os.path.join(destdir, 'data_processed', foldername)
-        print("Saving Train Data")
-        traindir = self.save_to_npz(destdir2, 'train')
-        print("Saving Eval Data")
-        evaldir = self.save_to_npz(destdir2, 'eval')
+        destdir2 = self.save_to_npz(destdir2)
+        traindir = os.path.join(destdir2, 'train')
+        evaldir = os.path.join(destdir2, 'eval')
 
         # Saving the data to the csv file
         newentry = pd.DataFrame([[foldername, self.get_id(), self.pipeline.get_id(), self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels]], columns=converted.columns)
@@ -100,75 +110,99 @@ class Dataset:
         converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
         return traindir, evaldir, self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels, foldername
 
-    def save_to_npz(self, destdir, div = 'train'):
-        ''' Saves the data to a numpy file
-            INPUT:
-                destdir - string - the directory to save the data
-                div - string - the division of the dataset to save
-        '''
-        destdir = os.path.join(destdir, div)
+    """
+        Changes in V2.0
+        - Save_to_npz now use pandas to store the dataset in order to get access of the dataset better :)
+        - This also helps in combining the train and val datasets and storing both their annotations in the same file
+        - I have also removed the separation between calling the function for train and eval datasets separately, instead the function will only be called once
+    """
+    def save_to_npz(self, destdir):
+        """
+        Saves the data to a numpy file.
+
+        Args:
+            destdir (str): The directory to save the data.
+            div (str): The division of the dataset to save ('train' or 'eval').
+
+        Returns:
+            str: The destination directory where data is saved.
+        """
         os.makedirs(destdir, exist_ok=True)
 
-        if (div == 'train'):
-            normal = self.trainfiles['normal']
-            abnormal = self.trainfiles['abnormal']
-        elif (div == 'eval'):
-            normal = self.evalfiles['normal']
-            abnormal = self.evalfiles['abnormal']
-        else:
-            raise ValueError("Invalid division")
+        # Checking the current division to convert
 
-        totalpl = len(self.pipeline)
-        print("Total Pipelines: ", totalpl)
-        print("Total Normal Files: ", len(normal))
-        print("Total Abnormal Files: ", len(abnormal))
-        # Saving data in csv file too
-        with open(os.path.join(destdir, 'data.csv'), 'w') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['File', 'Label'])
+        records = {"all": []}
+        for div, currfiles in [['train', self.trainfiles], ['eval', self.evalfiles]]:
+            print(f"Converting {div} files")
 
+            # Making the respective directory
+            destdir_withdiv = os.path.join(destdir, div)
+            os.makedirs(destdir_withdiv, exist_ok=True)
+
+            # Getting the files
+            normal_files = currfiles['normal']
+            abnormal_files = currfiles['abnormal']
+
+            records[div] = []
+
+            total_pipelines = len(self.pipeline)
+            print(f"Total Pipelines: {total_pipelines}")
+            print(f"Total Normal Files: {len(normal_files)}")
+            print(f"Total Abnormal Files: {len(abnormal_files)}")
+
+            # Process normal and abnormal files
             print("Converting Normal Files")
-            for file in tqdm(normal):
-                label = [1, 0]
-                try:
-                    data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-                    for i, pipeline in enumerate(self.pipeline):
-                        try:
-                            appendname = '_P' + str(i)
-                            data = pipeline.apply(data)
-                            # data = self.pipeline.apply(data)
-                            data = np.array(data.get_data())
-                            label = np.array(label)
-                            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                            np.savez(os.path.join(destdir, filename), data=data, label=label)
-                            writer.writerow([filename, 0])
-                        except:
-                            continue
-                except:
-                    continue
+            self._process_files(normal_files, [1, 0], 0, records[div], destdir_withdiv)
 
-            print("Converting Abnormal Files now")
-            for file in tqdm(abnormal):
-                label = [0, 1]
-                try:
-                    data = mne.io.read_raw_edf(file, preload=True, verbose='error')
-                    for i, pipeline in enumerate(self.pipeline):
-                        try:
-                            appendname = '_P' + str(i)
-                            data = pipeline.apply(data)
-                            data = np.array(data.get_data())
-                            label = np.array(label)
-                            filename = file.split('/')[-1].split('.')[0] + appendname + '.npz'
-                            np.savez(os.path.join(destdir, filename), data=data, label=label)
-                            writer.writerow([filename, 1])
-                        except:
-                            continue
-                except:
-                    continue
+            print("Converting Abnormal Files")
+            self._process_files(abnormal_files, [0, 1], 1, records[div], destdir_withdiv)
 
+            records["all"] += records[div]
+            # Save the records to a CSV using Pandas
+            csv_path = os.path.join(destdir_withdiv, 'data.csv')
+            df = pd.DataFrame(records[div])
+            df.to_csv(csv_path, index=False)
+            print(f"CSV saved to {csv_path}")
+
+        # Save the records to a CSV using Pandas
+        csv_path = os.path.join(destdir, 'data.csv')
+        df = pd.DataFrame(records["all"])
+        df.to_csv(csv_path, index=False)
+        print(f"CSV saved to {csv_path}")
         return destdir
 
+    def _process_files(self, files, label, label_index, records, destdir):
+        """
+        Private method to process files and save the data.
 
+        Args:
+            files (list): List of files to process.
+            label (list): Label to assign to the files.
+            label_index (int): Integer index of the label for CSV writing.
+            records (list): List to store the file and label information.
+            destdir (str): The destination directory to save the processed files.
+        """
+        for file in tqdm(files, desc=f"Processing {'Normal' if label_index == 0 else 'Abnormal'} files"):
+            try:
+                data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                for i, pipeline in enumerate(self.pipeline):
+                    try:
+                        appendname = f"_P{i}"
+                        processed_data = pipeline.apply(data)
+                        processed_data = np.array(processed_data.get_data())
+                        filename = f"{os.path.splitext(os.path.basename(file))[0]}{appendname}.npz"
+
+                        # Save processed data to disk
+                        np.savez(os.path.join(destdir, filename), data=processed_data, label=np.array(label))
+
+                        # Append file info to records
+                        records.append({'File': filename, 'Label': label_index})
+                    except Exception as e:
+                        print(f"Pipeline step {i} failed for file {file}: {e}")
+                        continue
+            except Exception as e:
+                print(f"Failed to process file {file}: {e}")
+                continue
 
 
 
