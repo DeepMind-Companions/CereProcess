@@ -8,3 +8,8 @@
 - Instead of returning individual traindir and destdir, it returns destdir, from which we can extract traindir and destdir
 - destdir/data.csv contains the combined data now
 
+
+### Created _procces_files private function
+
+- The function has been made to reuse the code in the .save_to_npz() function
+

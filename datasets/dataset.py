@@ -101,14 +101,12 @@ class Dataset:
         foldername = 'results' + str(len(converted))
         destdir2 = os.path.join(destdir, 'data_processed', foldername)
         destdir2 = self.save_to_npz(destdir2)
-        traindir = os.path.join(destdir2, 'train')
-        evaldir = os.path.join(destdir2, 'eval')
 
         # Saving the data to the csv file
         newentry = pd.DataFrame([[foldername, self.get_id(), self.pipeline.get_id(), self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels]], columns=converted.columns)
         converted = pd.concat([converted, newentry], ignore_index=True)
         converted.to_csv(os.path.join(destdir, 'converted.csv'), index=False)
-        return traindir, evaldir, self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels, foldername
+        return destdir2, self.pipeline.sampling_rate, self.pipeline.time_span, self.pipeline.channels, foldername
 
     """
         Changes in V2.0

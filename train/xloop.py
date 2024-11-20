@@ -79,7 +79,7 @@ def oneloop(device, model, input_size, datapath, basedir, pipeline, hyperparamet
     dataset = Dataset(datapath, basedir)
     dataset.set_pipeline(pipeline)
     datadir = os.path.join(destdir, 'data')
-    traindir, evaldir, s_rate, t_span, c_no, data_id = dataset.save_all(datadir)
+    datadir, s_rate, t_span, c_no, data_id = dataset.save_all(datadir)
     if (input_size != _calc_inputsize(s_rate, t_span, c_no)):
         print("Input Size given: ", input_size)
         print("Calculated: ", _calc_inputsize(s_rate, t_span, c_no))
