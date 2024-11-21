@@ -27,19 +27,19 @@ class Dataset:
         Keeps Data in EEG format and then converts it to other forms
 
     '''
-    def __init__(self, datapath, basedir = 'TUH EEG Corpus/edf'):
+    def __init__(self, datapath):
         ''' Constructor Function
             INPUT:
                 datapath - string - path to the MNE source files
                 basedir - string - the directory before the train and eval directories
         '''
-        self.trainfiles, self.evalfiles = get_files(datapath, basedir)
+        self.trainfiles, self.evalfiles = get_files(datapath)
 
         # Calculating the lengths of both train and eval
         trainlen = [len(self.trainfiles['normal']), len(self.trainfiles['abnormal'])]
         evallen = [len(self.evalfiles['normal']), len(self.evalfiles['abnormal'])]
         # Also getting the fullpath
-        fullpath = os.path.join(datapath, basedir)
+        fullpath=datapath
         fullpath = fullpath.replace("/", "")
         if len(fullpath) > 10:
             fullpath = fullpath[-10:]
@@ -96,7 +96,7 @@ class Dataset:
         datastored = converted[(converted['Data ID'] == self.get_id()) & (converted['Pipeline ID'] == self.pipeline.get_id())]
         if len(datastored) > 0:
             print("Data Already Stored")
-            return os.path.join(destdir, 'data_processed', datastored.iloc[0]['Folder Name'], 'train'), os.path.join(destdir, 'data_processed', datastored.iloc[0]['Folder Name'], 'eval'), datastored.iloc[0]['Sampling Rate'], datastored.iloc[0]['Time Span'], datastored.iloc[0]['Total Channels'], self.id + '_P' + self.pipeline.get_id()
+            return os.path.join(destdir, 'data_processed', datastored.iloc[0]['Folder Name']), datastored.iloc[0]['Sampling Rate'], datastored.iloc[0]['Time Span'], datastored.iloc[0]['Total Channels'], self.id + '_P' + self.pipeline.get_id()
 
         foldername = 'results' + str(len(converted))
         destdir2 = os.path.join(destdir, 'data_processed', foldername)
@@ -194,7 +194,7 @@ class Dataset:
                         np.savez(os.path.join(destdir, filename), data=processed_data, label=np.array(label))
 
                         # Append file info to records
-                        records.append({'File': filename, 'Label': label_index})
+                        records.append({'File': os.path.join(destdir,filename), 'Label': label_index})
                     except Exception as e:
                         print(f"Pipeline step {i} failed for file {file}: {e}")
                         continue

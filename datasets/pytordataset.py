@@ -43,12 +43,14 @@ class KFoldDataset():
             root_dir (string): Directory with all the data.
         """
         annotations_file = os.path.join(root_dir, 'data.csv')
+        self.root_dir = root_dir
         self.annotations = pd.read_csv(annotations_file)
         self.skf = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
         self.gen = self.skf.split(self.annotations["File"], self.annotations["Label"])
 
-    def get_folds(self):
-        return self.skf.split(self.annotations["File"], self.annotations["Label"])
-    def get_fold(self):
+    def __iter__(self):
+        return self
+
+    def __next__(self):
         curr = next(self.gen)
-        return curr[0], curr[1]
+        return EEGDataset(self.root_dir, curr[0]), EEGDataset(self.root_dir, curr[1])
