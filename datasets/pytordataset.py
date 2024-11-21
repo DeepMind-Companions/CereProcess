@@ -3,19 +3,19 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 import pandas as pd
-
+from sklearn.model_selection import StratifiedKFold
 
 class EEGDataset(Dataset):
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, indexes=None):
         """
         Args:
             annotations_file (string): Path to the csv file with annotations.
             root_dir (string): Directory with all the data.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
         """
         annotations_file = os.path.join(root_dir, 'data.csv')
         self.annotations = pd.read_csv(annotations_file)
+        if (type(indexes) != type(None)):
+            self.annotations = self.annotations[self.annotations.index.isin(indexes)]
         self.root_dir = root_dir
 
     def __len__(self):
@@ -35,3 +35,20 @@ class EEGDataset(Dataset):
         return eeg, label
 
 
+class KFoldDataset():
+    def __init__(self, root_dir, n_splits=10, shuffle=True, random_state=42):
+        """
+        Args:
+            annotations_file (string): Path to the csv file with annotations.
+            root_dir (string): Directory with all the data.
+        """
+        annotations_file = os.path.join(root_dir, 'data.csv')
+        self.annotations = pd.read_csv(annotations_file)
+        self.skf = StratifiedKFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+        self.gen = self.skf.split(self.annotations["File"], self.annotations["Label"])
+
+    def get_folds(self):
+        return self.skf.split(self.annotations["File"], self.annotations["Label"])
+    def get_fold(self):
+        curr = next(self.gen)
+        return curr[0], curr[1]
