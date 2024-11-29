@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from datasets.pytordataset import KFoldDataset, EEGDataset
 from train.misc import get_model_size
 from train.store import update_csv
+import pandas as pd
 
 # def evaluate(model, val_loader, criterion, device, metrics, history):
 
@@ -20,12 +21,14 @@ def _get_datasummary(datapath, pipeline):
 def _calc_inputsize(s_rate, t_span, c_no):
     return (c_no, s_rate * t_span)
 
-def _get_dataloaders(traindir, evaldir, batch_size, shuffle_seed = 0):
-    traindataset, evaldataset = get_datasets(traindir, evaldir, shuffle_seed)
-    trainloader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
-    evalloader = DataLoader(evaldataset, batch_size=batch_size, shuffle=False)
-    return trainloader, evalloader
-
+def get_dataloaders(datadir, batch_size):
+    train_dir = os.path.join(datadir, 'train')
+    eval_dir = os.path.join(datadir, 'eval')
+    trainset = EEGDataset(train_dir)
+    evalset = EEGDataset(eval_dir)
+    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    eval_loader = DataLoader(evalset)
+    return train_loader, eval_loader
 
 def _write_counter(counter, destpath, filename='counter.txt'):
     filename = os.path.join(destpath, filename)
