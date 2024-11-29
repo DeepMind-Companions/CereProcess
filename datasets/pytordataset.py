@@ -22,8 +22,7 @@ class EEGDataset(Dataset):
         return len(self.annotations)
 
     def __getitem__(self, idx):
-        eeg_name = os.path.join(self.root_dir,
-                                self.annotations.iloc[idx, 0])
+        eeg_name = self.annotations.iloc[idx, 0]
         eeg = np.load(eeg_name, allow_pickle=True)['data']
         eeg = torch.tensor(eeg)
         label = self.annotations.iloc[idx, 1]
