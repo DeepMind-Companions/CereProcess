@@ -40,7 +40,7 @@ def get_filedir(datapath, normal=True, basedir = '01_tcp_ar'):
    
     return filedir
 
-def get_files(datapath, base_dir):
+def get_files(datapath):
     '''
         Using this to get the files from the source datapath seperately
         takes in the datapath for the MNE source files in the correct directory format and return the files
@@ -51,7 +51,6 @@ def get_files(datapath, base_dir):
 
         OUPTUT: trainfiles[2], evalfiles[2] - list of files in the training and evaluation data, both normal and abnormal
     '''
-    datapath = os.path.join(datapath, base_dir)
     trainfiles = {"normal": [], "abnormal": []}
     evalfiles = {"normal": [], "abnormal": []}
     for root, dirs, files in os.walk(datapath):
