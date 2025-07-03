@@ -183,6 +183,7 @@ class Dataset:
         for file in tqdm(files, desc=f"Processing {'Normal' if label_index == 0 else 'Abnormal'} files"):
             try:
                 data = mne.io.read_raw_edf(file, preload=True, verbose='error')
+                duration = data.n_times / data.info['sfreq']
                 for i, pipeline in enumerate(self.pipeline):
                     try:
                         appendname = f"_P{i}"
@@ -196,10 +197,8 @@ class Dataset:
                         # Append file info to records
                         records.append({'File': os.path.join(destdir,filename), 'Label': label_index})
                     except Exception as e:
-                        print(f"Pipeline step {i} failed for file {file}: {e}")
                         continue
             except Exception as e:
-                print(f"Failed to process file {file}: {e}")
                 continue
 
 

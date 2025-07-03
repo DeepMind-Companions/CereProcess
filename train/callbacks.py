@@ -1,4 +1,4 @@
-from torchmetrics import Accuracy, Precision, Recall, F1Score, AUROC, Specificity
+from torchmetrics import Accuracy, Precision, Recall, F1Score, AUROC, Specificity, ROC
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import pickle
@@ -109,6 +109,8 @@ def def_metrics(device):
         'precision': Precision(task='binary').to(device),
         'recall': Recall(task='binary').to(device),
         'f1score': F1Score(task='binary').to(device),
-        'auc': AUROC(task='binary').to(device),
-        'specificity': Specificity(task='binary').to(device)
+        'auroc': AUROC(task='binary').to(device),
+        'specificity': Specificity(task='binary').to(device),
+        # ROC doesn't work like this
+        # 'roc_curve': ROC(task='binary').to(device)
     })

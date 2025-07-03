@@ -96,23 +96,122 @@ class PaddedCropData(CropData):
         Inputs: raw EEG data in MNE format
         Outputs: raw EEG data cropped to the specified time range
     '''
-    def __init__(self, tmin, tmax):
+    def __init__(self, tmin, tmax, reverse=True):
         self.tmin = tmin
         self.tmax = tmax
         self.time_span = tmax - tmin
+        self.reverse = reverse
     def func(self, data):
+        data.crop(tmin=self.tmin)
         if data.n_times / data.info["sfreq"] >= self.tmax:
-            return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
+            return data.crop(tmin=0, tmax=self.tmax - self.tmin, include_tmax=False)
         else:
             while data.n_times / data.info["sfreq"] < self.tmax:
                 data_only, _ = data[:]
                 reversed = np.flip(data_only, axis = 1)
                 info = data.info
-                data_only = np.concatenate([data_only, reversed], axis=1)
+                if self.reverse:
+                    data_only = np.concatenate([data_only, reversed], axis=1)
+                else:
+                    data_only = np.concatenate([data_only, data_only], axis=1)
                 data = mne.io.RawArray(data_only, info)
-            return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
+            return data.crop(tmin=0, tmax=self.tmax - self.tmin, include_tmax=False)
     def get_id(self):
         return f'{self.__class__.__name__}_{self.time_span}'
+    
+class FilterOut(Preprocess):
+    '''Reponsible for not processing files below a certain length
+    '''
+    def __init__(self, min_len = 6, max_len=50):
+        self.min_len = min_len
+        self.max_len = max_len
+    def func(self, data):
+        if data.n_times / data.info['sfreq'] > self.max_len * 60:
+            raise ValueError(f"Data length is longer than the maximum allowed length of {self.max_len} minutes.")
+        if data.n_times / data.info['sfreq'] < self.min_len * 60:
+            raise ValueError(f"Data length is shorter than the minimum allowed length of {self.min_len} minutes.")
+        return data
+    def get_id(self):
+        return f'{self.__class__.__name__}_{self.min_len}_{self.max_len}'
+
+
+class BandPassFilter(Preprocess):
+    ''' Responsible for applying a band-pass filter to the data
+        Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data with a band-pass filter applied
+    '''
+    def __init__(self, l_freq, h_freq, method='iir', iir_params=None, fir_design='firwin'):
+        '''
+        Args:
+            l_freq (float): Lower cutoff frequency in Hz
+            h_freq (float): Upper cutoff frequency in Hz
+            method (str): Filtering method, e.g. 'iir' or 'fir'. Default: 'iir'.
+            iir_params (dict, optional): Parameters for IIR filter (order, ftype, output). Default: Butterworth order 4 SOS.
+            fir_design (str): FIR filter design to use when method='fir'. Default: 'firwin'.
+        '''
+        self.l_freq = l_freq
+        self.h_freq = h_freq
+        self.method = method
+        # Default IIR params: 4th order butterworth SOS
+        self.iir_params = iir_params or dict(order=4, ftype='butter', output='sos')
+        self.fir_design = fir_design
+
+    def func(self, data):
+        sfreq = data.info['sfreq']
+        nyquist = sfreq / 2.0
+        # Ensure cutoff frequencies are valid
+        if not (0 < self.l_freq < self.h_freq < nyquist):
+            raise ValueError(f"Cutoff frequencies must satisfy 0 < l_freq < h_freq < Nyquist ({nyquist} Hz)")
+
+        return data.filter(
+            l_freq=self.l_freq,
+            h_freq=self.h_freq,
+            method=self.method,
+            iir_params=self.iir_params if self.method == 'iir' else None,
+            fir_design=self.fir_design if self.method == 'fir' else None,
+            verbose='error'
+        )
+
+    def get_id(self):
+        return f"{self.__class__.__name__}_{self.l_freq}_{self.h_freq}_{self.method}"
+    
+class ChebyshevFilter(Preprocess):
+    ''' Responsible for applying a Chebyshev Type I band-pass filter to the data
+        Inputs: raw EEG data in MNE format
+        Outputs: raw EEG data with a Chebyshev band-pass filter applied
+    '''
+    def __init__(self, l_freq, h_freq, order, ripple=1.0):
+        '''
+        Args:
+            l_freq (float): Lower cutoff frequency in Hz
+            h_freq (float): Upper cutoff frequency in Hz
+            order (int): Filter order
+            ripple (float): Passband ripple in dB (default: 1.0 dB)
+        '''
+        self.l_freq = l_freq
+        self.h_freq = h_freq
+        self.order = order
+        self.ripple = ripple
+        self.iir_params = dict(order=self.order, ftype='cheby1', rp=self.ripple, output='sos')
+
+    def func(self, data):
+        sfreq = data.info['sfreq']
+        nyquist = sfreq / 2.0
+        # Validate cutoff frequencies
+        if not (0 < self.l_freq < self.h_freq < nyquist):
+            raise ValueError(f"Cutoff frequencies must satisfy 0 < l_freq < h_freq < Nyquist ({nyquist} Hz)")
+
+        return data.filter(
+            l_freq=self.l_freq,
+            h_freq=self.h_freq,
+            method='iir',
+            iir_params=self.iir_params,
+            verbose='error'
+        )
+
+    def get_id(self):
+        return f"{self.__class__.__name__}_{self.l_freq}_{self.h_freq}_ord{self.order}_r{self.ripple}"
+
 
 class HighPassFilter(Preprocess):
     ''' Responsible for applying a high pass filter to the data
@@ -232,13 +331,25 @@ class Reverse(Preprocess):
         raw_reversed = mne.io.RawArray(data_reversed, info, verbose='error')
         return raw_reversed
 
-class MakeNormal(Preprocess):
-    ''' Responsible for making the data normal
-        Inputs: raw EEG data in MNE format
-        Outputs: raw EEG data made normal
+class ZScoreNormalization(Preprocess):
+    ''' Performs Z-score normalization using mean and std computed on the first batch
+        Ensures consistent scaling across the entire recording by storing parameters
     '''
+    def __init__(self, mean, std):
+        # Will be set on first call to func()
+        self.mean = mean
+        self.std = std
+
     def func(self, data):
-        return data.apply_function(lambda data: (data - np.mean(data)) / np.std(data))
+        # Extract data array (channels x times)
+        data_array, _ = data[:]
+        # Apply normalization
+        normalized = (data_array - self.mean) / (self.std + np.finfo(float).eps)
+        # Return new RawArray with same info
+        return mne.io.RawArray(normalized, data.info, verbose='error')
+
+    def get_id(self):
+        return f"{self.__class__.__name__}_{self.mean}_{self.std}"
 
 class Pipeline(Preprocess):
     ''' Pipeline class defines the preprocessing pipeline for the EEG data.
@@ -458,11 +569,11 @@ def get_wavenet_pl(dataset='TUH'):
     pipeline = MultiPipeline([get_wavenet_pipeline(dataset), get_wavenet_reverse(dataset)])
     return pipeline
 
-def get_scnet_pipeline(dataset = 'TUH'):
+def get_scnet_pipeline(dataset = 'TUH', length_minutes = 7):
     '''Returns the preprocessing pipeline for SCNet Model
     '''
     pipeline = Pipeline()
-    pipeline.add(CropData(60, 480))
+    pipeline.add(CropData(60, 60 + length_minutes * 60))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
@@ -510,19 +621,21 @@ def get_scnet_pipeline_tuh(dataset = 'TUH'):
     pipeline.add(Scale(1e4))
     return pipeline
 
-def general_pipeline(dataset = 'TUH'):
+def general_pipeline(dataset='TUH', length_minutes=7, max_len=25):
     '''Returns a general pipeline that retains most of the recording length
     '''
     pipeline = Pipeline()
+    pipeline.add(FilterOut(max_len=max_len))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
     elif (dataset == 'NMT'):
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
-    pipeline.add(HighPassFilter(l_freq=0.5, h_freq=50))
-    pipeline.add(ResampleData(200))
-    pipeline.add(PaddedCropData(0, 10 * 60))
+    pipeline.add(NotchFilter(60))
+    pipeline.add(ResampleData(50))
+    pipeline.add(ClipAbsData(100))
+    pipeline.add(PaddedCropData(60, 60 + length_minutes * 60))
     pipeline.add(Scale(1e6))
     return pipeline
 
@@ -540,4 +653,36 @@ def general_pipeline_downsampled(dataset = 'TUH'):
     pipeline.add(ResampleData(100))
     pipeline.add(PaddedCropData(0, 10 * 60))
     pipeline.add(Scale(1e6))
+    return pipeline
+
+def pipeline_all(dataset = 'TUH', length_minutes = 7):
+    '''Returns a general pipeline that retains most of the recording length
+    '''
+    pipeline = Pipeline()
+    # pipeline.add(FilterOut(min_len=6))
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+        pipeline.add(BipolarRef())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+        pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
+    pipeline.add(ResampleData(100))
+    pipeline.add(ClipAbsData(100))
+    pipeline.add(PaddedCropData(60, 60 + length_minutes * 60))
+    pipeline.add(Scale(1e6))
+    return pipeline
+
+def get_conformer_pipeline(dataset='TUH'):
+    '''Returns the pipeline for EEG Conformer
+    '''
+    pipeline = Pipeline()
+    pipeline.add(CropData(0, 60))
+    if(dataset=='TUH'):
+        pipeline.add(ReduceChannels())
+    elif(dataset=='NMT'):
+        pipeline.add(ReduceChannels(channels=NMT_CHANNELS))
+    pipeline.add(ResampleData(250))
+    pipeline.add(ChebyshevFilter(4, 40, 6))
+    if dataset=='TUH':
+        pipeline.add(ZScoreNormalization(2.7020361347345503, 23.939469061795837))
     return pipeline

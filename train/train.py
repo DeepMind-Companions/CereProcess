@@ -57,7 +57,6 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
             del data, target, output, loss
             if device == 'cuda':
                 torch.cuda.empty_cache()
-
             metrics.update(label_check, predicted)
         train_loss /= len(train_loader)
         results = metrics.compute()
@@ -87,7 +86,7 @@ def train(model, train_loader, val_loader, optimizer, criterion, epochs, history
         print(f'Train F1 Score: {float(history.history["train"]["f1score"][-1]):.4f} - Val F1 Score: {float(history.history["val"]["f1score"][-1]):.4f}', flush = True)
         history.print_best()
         history.plot()
-    model.load_state_dict(torch.load(save_path))
+    model.load_state_dict(torch.load(earlystopping.path))
     val_loss = evaluate(model, val_loader, criterion, device, metrics, history)
     clear_output(wait=True)
     history.plot()

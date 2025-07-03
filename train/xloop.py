@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from datasets.pytordataset import KFoldDataset, EEGDataset
 from train.misc import get_model_size
 from train.store import update_csv
-import pandas as pd
+import numpy as np
 
 # def evaluate(model, val_loader, criterion, device, metrics, history):
 
@@ -21,14 +21,40 @@ def _get_datasummary(datapath, pipeline):
 def _calc_inputsize(s_rate, t_span, c_no):
     return (c_no, s_rate * t_span)
 
-def get_dataloaders(datadir, batch_size):
+def get_dataloaders(datadir, batch_size, seed, target_length=None, indexes=None):
+    """
+    Utility to get train and eval DataLoaders with optional time-step cropping.
+
+    Args:
+        datadir (string): Root directory containing 'train' and 'eval' subdirs.
+        batch_size (int): Batch size for loaders.
+        seed (int): Random seed for shuffling.
+        target_length (int, optional): Number of time steps to crop each sample to.
+        indexes (list of int, optional): Subset of dataset indices to include.
+
+    Returns:
+        train_loader, eval_loader
+    """
     train_dir = os.path.join(datadir, 'train')
     eval_dir = os.path.join(datadir, 'eval')
-    trainset = EEGDataset(train_dir)
-    evalset = EEGDataset(eval_dir)
-    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-    eval_loader = DataLoader(evalset)
+
+    trainset = EEGDataset(train_dir, indexes=indexes, target_length=target_length)
+    evalset = EEGDataset(eval_dir,  indexes=indexes, target_length=target_length)
+
+    train_loader = DataLoader(
+        trainset,
+        batch_size=batch_size,
+        shuffle=True,
+        worker_init_fn=lambda _: np.random.seed(seed)
+    )
+    eval_loader = DataLoader(
+        evalset,
+        batch_size=batch_size,
+        shuffle=False
+    )
+
     return train_loader, eval_loader
+
 
 def _write_counter(counter, destpath, filename='counter.txt'):
     filename = os.path.join(destpath, filename)
@@ -47,6 +73,7 @@ def _read_counter(destpath, filename='counter.txt'):
 def _increment_counter(destpath, filename='counter.txt'):
     filename = os.path.join(destpath, filename)
     counter = _read_counter(destpath)
+    print("Incremented")
     counter += 1
     _write_counter(counter, destpath)
 

@@ -44,8 +44,8 @@ NMT_PAIRS = [
     ('P3', 'O1'),
     ('P4', 'O2'),
     ('T6', 'O2'),
-    ('FZ','CZ'), # missing 
-    ('CZ','PZ') # missing 
+    #('FZ','CZ'), # missing 
+    #('CZ','PZ') # missing 
 ]
 
 CHANNELS = ['EEG FP1-REF',
@@ -94,6 +94,6 @@ PAIRS = [
     ('EEG P3-REF', 'EEG O1-REF') ,
     ('EEG P4-REF', 'EEG O2-REF') ,
     ('EEG T6-REF', 'EEG O2-REF') ,
-    ('EEG FZ-REF','EEG CZ-REF'), # missing 
-    ('EEG CZ-REF','EEG PZ-REF') # missing 
+    #('EEG FZ-REF','EEG CZ-REF'), # missing 
+    #('EEG CZ-REF','EEG PZ-REF') # missing 
 ]
