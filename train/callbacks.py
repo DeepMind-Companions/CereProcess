@@ -20,7 +20,7 @@ class History:
         }
         self.cm = {
             "actual": [],
-            "predicted": []
+            "pred": []
         }
     
     def update_cm(self, actual, pred):

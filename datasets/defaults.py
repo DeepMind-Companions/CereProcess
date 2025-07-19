@@ -5,10 +5,18 @@ import numpy as np
 
 tuh_dataset = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/TUH EEG Corpus'
 nmt_dataset = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/[M] nmt_scalp_eeg_dataset'
-nmt_new_dataset = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/nmt_v2'
+nmt_new_dataset = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/nmt_4k_split'
+nmt_new_dataset_500 = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/nmt_4k_split'
+nmt_new_dataset_1500 = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/nmt_4k_split'
+nmt_new_dataset_1000 = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/nmt_4k_split'
+nmt_new_dataset_2000 = r'/media/tukl/ee279b7d-bb8a-4a20-8bf9-90b2c542efcc/EEG Datasets/nmt_4k_split'
 
 def get_def_ds(mins = 1):
     return (tuh_dataset, get_scratch_pl('TUH', mins), np.array([1, 1]), "results/tuh"), \
             (nmt_dataset, get_scratch_updated_pl('NMT', mins), np.array([1900, 305]), "results/nmt"), \
-            (nmt_new_dataset, get_scratch_updated_pl('NMT', mins), np.array([3945, 708]), "results/nmtv2")
+            (nmt_new_dataset, get_scratch_updated_pl('NMT', mins), np.array([3945, 708]), "results/nmt4k"), \
+            # (nmt_new_dataset_500, get_scratch_updated_pl('NMT', mins), np.array([3945, 708]), "results/nmt4k500"), \
+            # (nmt_new_dataset_1000, get_scratch_updated_pl('NMT', mins), np.array([3945, 708]), "results/nmt4k1000"), \
+            # (nmt_new_dataset_1500, get_scratch_updated_pl('NMT', mins), np.array([3945, 708]), "results/nmt4k1500"), \
+            # (nmt_new_dataset_2000, get_scratch_updated_pl('NMT', mins), np.array([3945, 708]), "results/nmt4k2000")
 

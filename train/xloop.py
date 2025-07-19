@@ -7,6 +7,7 @@ from datasets.pytordataset import KFoldDataset, EEGDataset
 from train.misc import get_model_size
 from train.store import update_csv
 import numpy as np
+import pandas as pd
 
 # def evaluate(model, val_loader, criterion, device, metrics, history):
 
@@ -54,6 +55,49 @@ def get_dataloaders(datadir, batch_size, seed, target_length=None, indexes=None)
     )
 
     return train_loader, eval_loader
+
+def get_dataloaders_restricted(datadir, batch_size, seed, target_length=None, indexes=None, limit_normal=500):
+    train_dir = os.path.join(datadir, 'train')
+    eval_dir = os.path.join(datadir, 'eval')
+
+    # Load train CSV
+    annotations_file = os.path.join(train_dir, 'data.csv')
+    df = pd.read_csv(annotations_file)
+
+    # Filter normal and abnormal
+    normal_df = df[df['Label'] == 0]
+    abnormal_df = df[df['Label'] == 1]
+    print("Abnormal",len(abnormal_df))
+    # Randomly sample 500 normal indices
+    np.random.seed(seed)
+    sampled_normal = normal_df.sample(n=limit_normal, replace=False, random_state=seed)
+    print("Normal",len(sampled_normal))
+    # Combine sampled normal + all abnormal
+    final_df = pd.concat([sampled_normal, abnormal_df]).reset_index(drop=True)
+
+    # Get corresponding indices in the original CSV (if needed)
+    selected_indices = final_df.index.tolist()
+    print("selected_inex:",len(selected_indices))
+
+    # Create datasets
+    trainset = EEGDataset(train_dir, indexes=selected_indices, target_length=target_length)
+    evalset = EEGDataset(eval_dir, indexes=indexes, target_length=target_length)  # full eval set
+
+    # Create loaders
+    train_loader = DataLoader(
+        trainset,
+        batch_size=batch_size,
+        shuffle=True,
+        worker_init_fn=lambda _: np.random.seed(seed)
+    )
+    eval_loader = DataLoader(
+        evalset,
+        batch_size=batch_size,
+        shuffle=False
+    )
+
+    return train_loader, eval_loader
+
 
 
 def _write_counter(counter, destpath, filename='counter.txt'):
@@ -103,7 +147,7 @@ def get_datanpz(datapath, destdir, pipeline, input_size):
     return datadir, data_description
 
 
-def oneloop(device, model, train_loader, eval_loader, data_description, hyperparameters, trainelements, destdir, model_name = None, save_best_acc = False):
+def oneloop(device, model, train_loader, eval_loader, data_description, hyperparameters, trainelements, destdir, model_name = None, save_best_acc = False, scheduler=None):
     input_size = _calc_inputsize(data_description["sampling_rate"], data_description["time_span"], data_description["channel_no"])
     # We will start by initializing the model and data description
     model_description = {}
@@ -133,8 +177,10 @@ def oneloop(device, model, train_loader, eval_loader, data_description, hyperpar
     model_description['id'] = model.__class__.__name__ + '_' + data_description["id"]
 
     optimizer = trainelements.optimizer(model.parameters(), lr=hyperparameters['lr'])
-
-
+    if scheduler:
+        sch = scheduler(optimizer, T_max=1000)
+    else:
+        sch = None
 
     # Finally training everything
     model_save_dir = os.path.join(destdir, 'models')
@@ -146,7 +192,7 @@ def oneloop(device, model, train_loader, eval_loader, data_description, hyperpar
 
     model_save_path = os.path.join(model_save_dir, model_save_name + '.pt')
     earlystopping.path = model_save_path
-    train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping, accum_iter=hyperparameters['accum_iter'], save_best_acc=save_best_acc)
+    train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping, accum_iter=hyperparameters['accum_iter'], save_best_acc=save_best_acc, scheduler=sch)
     update_csv(destdir, model_description, data_description, history, hyperparameters, model_save_name)
     return model
     

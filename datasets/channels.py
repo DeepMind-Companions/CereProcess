@@ -94,6 +94,8 @@ PAIRS = [
     ('EEG P3-REF', 'EEG O1-REF') ,
     ('EEG P4-REF', 'EEG O2-REF') ,
     ('EEG T6-REF', 'EEG O2-REF') ,
+
+]
+
     #('EEG FZ-REF','EEG CZ-REF'), # missing 
     #('EEG CZ-REF','EEG PZ-REF') # missing 
-]

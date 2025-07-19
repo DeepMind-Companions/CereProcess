@@ -5,3 +5,8 @@ __pycache__
 results
 *.pt
 *.ipynb
+misc
+Adversarial
+models
+*.png
+*.txt

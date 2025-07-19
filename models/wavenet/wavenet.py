@@ -12,6 +12,7 @@ class WaveLayer(nn.Module):
         self.sig = nn.Sigmoid()
         self.filter = nn.Conv1d(in_channels, in_channels, 1)
         self.gate = nn.Conv1d(in_channels, in_channels, 1)
+        self.conv2 = nn.Conv1d(in_channels, in_channels, 1)
         self.bn = bn
 
         if (self.bn == True):
@@ -41,6 +42,7 @@ class WaveLayer(nn.Module):
         sig = self.sig(gate)
         z = tanh*sig
         z = z[:,:,:-self.padding]
+        z = self.conv2(z)
         x = x + z
         return x
 

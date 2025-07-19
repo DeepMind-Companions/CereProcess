@@ -621,18 +621,21 @@ def get_scnet_pipeline_tuh(dataset = 'TUH'):
     pipeline.add(Scale(1e4))
     return pipeline
 
-def general_pipeline(dataset='TUH', length_minutes=7, max_len=25):
+def general_pipeline(dataset='TUH', length_minutes=10, min_len=6, max_len=25):
     '''Returns a general pipeline that retains most of the recording length
     '''
     pipeline = Pipeline()
-    pipeline.add(FilterOut(max_len=max_len))
+    pipeline.add(FilterOut(min_len=min_len, max_len=max_len))
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
         pipeline.add(BipolarRef())
     elif (dataset == 'NMT'):
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
         pipeline.add(BipolarRef(pairs=NMT_PAIRS, channels= NMT_CHANNELS))
-    pipeline.add(NotchFilter(60))
+    if dataset == 'TUH':
+        pipeline.add(NotchFilter(60))
+    elif dataset == 'NMT':
+        pipeline.add(NotchFilter(50))
     pipeline.add(ResampleData(50))
     pipeline.add(ClipAbsData(100))
     pipeline.add(PaddedCropData(60, 60 + length_minutes * 60))

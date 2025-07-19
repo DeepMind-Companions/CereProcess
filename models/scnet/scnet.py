@@ -1,11 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-torch.manual_seed(4747)
-import random
-random.seed(4747)
-
-
 
 class MFFMBlock(nn.Module):
     def __init__(self, in_channels):
