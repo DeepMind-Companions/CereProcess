@@ -33,7 +33,7 @@ class ReduceChannels(Preprocess):
     def __init__(self, channels=CHANNELS):
         self.channels = channels
     def func(self, data):
-        return data.pick(self.channels)
+        return data.pick(self.channels).reorder_channels(self.channels)
 
 class ClipData(Preprocess):
     ''' Responsible for Clipping the data inside a fixed voltage range
@@ -388,7 +388,7 @@ class WindowData(Preprocess):
     ''' Slices the continuous data into windows (epochs) of a specified
         duration and overlap.
     '''
-    def __init__(self, window_duration=2.0, overlap_ratio=0.5):
+    def __init__(self, window_duration=2.0, overlap_ratio=0):
         '''
         Args:
             window_duration (float): The length of each window in seconds.
