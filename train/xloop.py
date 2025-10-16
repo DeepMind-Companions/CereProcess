@@ -1,11 +1,11 @@
 import os
 import torch
-from train.train import train
-from datasets.dataset import Dataset
+from .train import train
+from ..datasets.dataset import Dataset
 from torch.utils.data import DataLoader
-from datasets.pytordataset import KFoldDataset, EEGDataset
-from train.misc import get_model_size
-from train.store import update_csv
+from ..datasets.pytordataset import KFoldDataset, EEGDataset
+from .misc import get_model_size
+from .store import update_csv
 import numpy as np
 import pandas as pd
 
@@ -109,7 +109,7 @@ def _read_counter(destpath, filename='counter.txt'):
     filename = os.path.join(destpath, filename)
     if not os.path.exists(filename):
         return 0  # Return a default value (e.g., 0) if the file does not exist
-    
+
     with open(filename, 'r') as file:
         content = file.read()
         return int(content)  # or float(content) if you expect a float
@@ -195,7 +195,6 @@ def oneloop(device, model, train_loader, eval_loader, data_description, hyperpar
     train(model, train_loader, eval_loader, optimizer, criterion, hyperparameters['epochs'], history, metrics, device, model_save_path, earlystopping, accum_iter=hyperparameters['accum_iter'], save_best_acc=save_best_acc, scheduler=sch)
     update_csv(destdir, model_description, data_description, history, hyperparameters, model_save_name)
     return model
-    
 
 
 
@@ -203,6 +202,7 @@ def oneloop(device, model, train_loader, eval_loader, data_description, hyperpar
 
 
 
-    
+
+
 
 

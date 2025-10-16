@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from train.callbacks import History, Metrics, def_metrics
+from .callbacks import History, Metrics, def_metrics
 import numpy as np
 
 class EarlyStopping:
@@ -42,9 +42,9 @@ class EarlyStopping:
         if self.verbose:
             if self.save_best_acc:
                 print(f'Validation accuracy increased ({0 if self.val_loss_min == np.Inf else self.val_loss_min * 100:.6f} --> {val_loss*100:.6f}).  Saving model ...')
-            else:    
+            else:
                 print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-            
+
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
@@ -87,4 +87,4 @@ def def_hyp(batch_size = 32, lr = 0.0001, epochs = 50, accum_iter = 1):
             }
 
 def def_dev():
-   return torch.device("cuda" if torch.cuda.is_available() else 'cpu') 
+   return torch.device("cuda" if torch.cuda.is_available() else 'cpu')

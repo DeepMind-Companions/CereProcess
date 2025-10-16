@@ -1,4 +1,4 @@
-from datasets import pipeline as pl
+import .pipeline as pl
 from .channels import CHANNELS, PAIRS, NMT_CHANNELS, NMT_PAIRS
 
 def get_scratch_pl(dataset = 'TUH', mins = 1):
