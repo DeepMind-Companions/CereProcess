@@ -88,7 +88,7 @@ class CropData(Preprocess):
         return data.crop(tmin=self.tmin, tmax=self.tmax, include_tmax=False)
     def get_id(self):
         return f'{self.__class__.__name__}_{self.time_span}_{self.tmin}'
-    
+
 class PaddedCropData(CropData):
     ''' Responsible for cropping the data to the specified time range.
         If duration < tmax, flips the data, and appends the flipped data to
@@ -118,7 +118,7 @@ class PaddedCropData(CropData):
             return data.crop(tmin=0, tmax=self.tmax - self.tmin, include_tmax=False)
     def get_id(self):
         return f'{self.__class__.__name__}_{self.time_span}'
-    
+
 class FilterOut(Preprocess):
     '''Reponsible for not processing files below a certain length
     '''
@@ -174,7 +174,7 @@ class BandPassFilter(Preprocess):
 
     def get_id(self):
         return f"{self.__class__.__name__}_{self.l_freq}_{self.h_freq}_{self.method}"
-    
+
 class ChebyshevFilter(Preprocess):
     ''' Responsible for applying a Chebyshev Type I band-pass filter to the data
         Inputs: raw EEG data in MNE format
@@ -221,7 +221,7 @@ class HighPassFilter(Preprocess):
     def __init__(self, l_freq, h_freq=None):
         self.l_freq = l_freq
         self.h_freq = h_freq
-    def func(self, data):   
+    def func(self, data):
         iir_params = dict(order=4, ftype='butter', output='sos')
         return data.filter(l_freq=self.l_freq, h_freq=self.h_freq, method='iir', iir_params=iir_params, verbose='error')
     def get_id(self):
@@ -255,20 +255,20 @@ class ArtifactRemoval(Preprocess):
     def func(self, data):
         montage =  mne.channels.make_standard_montage('standard_1020')
         data.set_montage(montage, match_case=False,verbose=False)
-       
+
         ica = mne.preprocessing.ICA(method="picard", max_iter="auto", random_state=56,verbose=False)
         ica.fit(data,verbose=False)
 
         muscle_idx_auto, scores = ica.find_bads_muscle(data,verbose=False)
         badIndexes = np.where(np.array(scores) > np.median(scores)*self.threshold)[0].tolist()
-        
+
         ica.exclude = badIndexes
     # print(f"Automatically found muscle artifact ICA components: {badIndexes}")
         ica.apply(data,verbose=False)
         return data
     def get_id(self):
         return f'{self.__class__.__name__}_{self.threshold}'
-    
+
 class Scale(Preprocess):
     ''' Responsible for scaling the data by a fixed numer
         Inputs: Raw EEG in MNE format
@@ -295,8 +295,8 @@ class BipolarRef(Preprocess):
     def func(self, data):
         for anode, cathode in self.pairs:
             data = mne.set_bipolar_reference(data.load_data(), anode=[anode], cathode=[cathode], ch_name=f'{anode}-{cathode}', drop_refs=False, copy=True, verbose=False)
-        data.drop_channels(ch_names=self.channels)   
-        return data 
+        data.drop_channels(ch_names=self.channels)
+        return data
 
 class MinMax(Preprocess):
     '''Reponsible for performing channel specific
@@ -351,6 +351,75 @@ class ZScoreNormalization(Preprocess):
     def get_id(self):
         return f"{self.__class__.__name__}_{self.mean}_{self.std}"
 
+class FirBandPassFilter(Preprocess):
+    ''' Responsible for applying a FIR band-pass filter to the data
+        with specific transition bandwidths.
+    '''
+    def __init__(self, l_freq, h_freq, l_trans_bandwidth, h_trans_bandwidth, fir_design='firwin'):
+        '''
+        Args:
+            l_freq (float): Lower passband edge in Hz.
+            h_freq (float): Upper passband edge in Hz.
+            l_trans_bandwidth (float): Lower transition bandwidth in Hz.
+            h_trans_bandwidth (float): Upper transition bandwidth in Hz.
+            fir_design (str): FIR filter design to use. Default: 'firwin'.
+        '''
+        self.l_freq = l_freq
+        self.h_freq = h_freq
+        self.l_trans_bandwidth = l_trans_bandwidth
+        self.h_trans_bandwidth = h_trans_bandwidth
+        self.fir_design = fir_design
+
+    def func(self, data):
+        ''' Applies the FIR filter to the MNE Raw data object. '''
+        return data.filter(
+            l_freq=self.l_freq,
+            h_freq=self.h_freq,
+            method='fir',
+            l_trans_bandwidth=self.l_trans_bandwidth,
+            h_trans_bandwidth=self.h_trans_bandwidth,
+            fir_design=self.fir_design,
+            verbose='error'
+        )
+
+    def get_id(self):
+        ''' Returns a unique ID for this preprocessing step. '''
+        return (f"{self.__class__.__name__}_{self.l_freq}_{self.h_freq}_"
+                f"{self.l_trans_bandwidth}_{self.h_trans_bandwidth}")
+
+class WindowData(Preprocess):
+    ''' Slices the continuous data into windows (epochs) of a specified
+        duration and overlap.
+    '''
+    def __init__(self, window_duration=2.0, overlap_ratio=0.5):
+        '''
+        Args:
+            window_duration (float): The length of each window in seconds.
+            overlap_ratio (float): The fraction of overlap between consecutive windows (0.0 to 1.0).
+        '''
+        self.window_duration = window_duration
+        self.overlap_ratio = overlap_ratio
+        self.overlap_duration = window_duration * overlap_ratio
+
+    def func(self, data):
+        ''' Applies the windowing to the MNE Raw data object.
+
+            Note: This function returns an MNE Epochs object, not a Raw object.
+                  It should be the last step in a processing pipeline.
+        '''
+        epochs = mne.make_fixed_length_epochs(
+            data,
+            duration=self.window_duration,
+            overlap=self.overlap_duration,
+            preload=True, # Load data into memory
+            verbose=False
+        )
+        return epochs
+
+    def get_id(self):
+        ''' Returns a unique ID for this preprocessing step. '''
+        return f"{self.__class__.__name__}_{self.window_duration}s_{self.overlap_ratio}o"
+
 class Pipeline(Preprocess):
     ''' Pipeline class defines the preprocessing pipeline for the EEG data.
         Keeps the pipeline for preprocessing the data
@@ -360,7 +429,7 @@ class Pipeline(Preprocess):
             INPUT:
                 pipeline - list - list of functions to be applied to the data
         '''
-        
+
         self.pipeline = []
         self.sampling_rate = -1
         self.time_span = -1
@@ -412,7 +481,7 @@ class Pipeline(Preprocess):
         for func in self.pipeline:
             data = func.func(data)
         return data
-    
+
     def get_id(self):
         return super().get_id() + '_' + '_'.join([func.get_id() for func in self.pipeline])
 
@@ -446,12 +515,12 @@ class MultiPipeline():
             self.time_span = time_span
             self.channels = channels
         self.len = len(pipelines)
-        
+
     def __len__(self):
         ''' Returns the length of the pipeline
         '''
         return self.len
-    
+
     def __iter__(self):
         ''' Returns the iterator for the pipeline
         '''
@@ -689,3 +758,20 @@ def get_conformer_pipeline(dataset='TUH'):
     if dataset=='TUH':
         pipeline.add(ZScoreNormalization(2.7020361347345503, 23.939469061795837))
     return pipeline
+
+def neurotransformer_pipeline(dataset='TUH'):
+    '''Returns a pipeline for neurotransformer"
+    '''
+    pipeline = Pipeline()
+    if (dataset == 'TUH'):
+        pipeline.add(ReduceChannels())
+    elif (dataset == 'NMT'):
+        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
+    pipeline.add(FirBandPassFilter(l_freq=1, h_freq=45, l_trans_bandwidth=0.5, h_trans_bandwidth=5.62))
+    pipeline.add(ArtifactRemoval(threshold=ica_threshold))
+    pipeline.add(ResampleData(200))
+    pipeline.add(Scale(1e6))
+    pipeline.add(WindowData())
+    return pipeline
+
+
