@@ -709,14 +709,11 @@ def get_conformer_pipeline(dataset='TUH'):
         pipeline.add(ZScoreNormalization(2.7020361347345503, 23.939469061795837))
     return pipeline
 
-def neurotransformer_pipeline(dataset='TUH'):
+def neurotransformer_pipeline(dataset='NMT'):
     '''Returns a pipeline for neurotransformer"
     '''
     pipeline = Pipeline()
-    if (dataset == 'TUH'):
-        pipeline.add(ReduceChannels())
-    elif (dataset == 'NMT'):
-        pipeline.add(ReduceChannels(channels=NEUROTRANSFORMER_CHANNELS))
+    pipeline.add(ReduceChannels(channels=NEUROTRANSFORMER_CHANNELS))
     pipeline.add(BandPassFilter(l_freq=1, h_freq=45))
     pipeline.add(ResampleData(200))
     pipeline.add(WindowData())
