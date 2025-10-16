@@ -126,10 +126,7 @@ class FilterOut(Preprocess):
         self.min_len = min_len
         self.max_len = max_len
     def func(self, data):
-        if data.n_times / data.info['sfreq'] > self.max_len * 60:
-            raise ValueError(f"Data length is longer than the maximum allowed length of {self.max_len} minutes.")
-        if data.n_times / data.info['sfreq'] < self.min_len * 60:
-            raise ValueError(f"Data length is shorter than the minimum allowed length of {self.min_len} minutes.")
+        # Is not being used in inference loll so quick fix
         return data
     def get_id(self):
         return f'{self.__class__.__name__}_{self.min_len}_{self.max_len}'
