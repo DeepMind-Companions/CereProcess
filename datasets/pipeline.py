@@ -5,7 +5,7 @@
 
 import mne
 import numpy as np
-from .channels import CHANNELS, PAIRS, NMT_CHANNELS, NMT_PAIRS
+from .channels import CHANNELS, PAIRS, NMT_CHANNELS, NMT_PAIRS, NEUROTRANSFORMER_CHANNELS
 
 class Preprocess:
     def func(self, data):
@@ -137,21 +137,14 @@ class BandPassFilter(Preprocess):
         Inputs: raw EEG data in MNE format
         Outputs: raw EEG data with a band-pass filter applied
     '''
-    def __init__(self, l_freq, h_freq, method='iir', iir_params=None, fir_design='firwin'):
+    def __init__(self, l_freq, h_freq):
         '''
         Args:
             l_freq (float): Lower cutoff frequency in Hz
             h_freq (float): Upper cutoff frequency in Hz
-            method (str): Filtering method, e.g. 'iir' or 'fir'. Default: 'iir'.
-            iir_params (dict, optional): Parameters for IIR filter (order, ftype, output). Default: Butterworth order 4 SOS.
-            fir_design (str): FIR filter design to use when method='fir'. Default: 'firwin'.
         '''
         self.l_freq = l_freq
         self.h_freq = h_freq
-        self.method = method
-        # Default IIR params: 4th order butterworth SOS
-        self.iir_params = iir_params or dict(order=4, ftype='butter', output='sos')
-        self.fir_design = fir_design
 
     def func(self, data):
         sfreq = data.info['sfreq']
@@ -163,10 +156,6 @@ class BandPassFilter(Preprocess):
         return data.filter(
             l_freq=self.l_freq,
             h_freq=self.h_freq,
-            method=self.method,
-            iir_params=self.iir_params if self.method == 'iir' else None,
-            fir_design=self.fir_design if self.method == 'fir' else None,
-            verbose='error'
         )
 
     def get_id(self):
@@ -347,42 +336,6 @@ class ZScoreNormalization(Preprocess):
 
     def get_id(self):
         return f"{self.__class__.__name__}_{self.mean}_{self.std}"
-
-class FirBandPassFilter(Preprocess):
-    ''' Responsible for applying a FIR band-pass filter to the data
-        with specific transition bandwidths.
-    '''
-    def __init__(self, l_freq, h_freq, l_trans_bandwidth, h_trans_bandwidth, fir_design='firwin'):
-        '''
-        Args:
-            l_freq (float): Lower passband edge in Hz.
-            h_freq (float): Upper passband edge in Hz.
-            l_trans_bandwidth (float): Lower transition bandwidth in Hz.
-            h_trans_bandwidth (float): Upper transition bandwidth in Hz.
-            fir_design (str): FIR filter design to use. Default: 'firwin'.
-        '''
-        self.l_freq = l_freq
-        self.h_freq = h_freq
-        self.l_trans_bandwidth = l_trans_bandwidth
-        self.h_trans_bandwidth = h_trans_bandwidth
-        self.fir_design = fir_design
-
-    def func(self, data):
-        ''' Applies the FIR filter to the MNE Raw data object. '''
-        return data.filter(
-            l_freq=self.l_freq,
-            h_freq=self.h_freq,
-            method='fir',
-            l_trans_bandwidth=self.l_trans_bandwidth,
-            h_trans_bandwidth=self.h_trans_bandwidth,
-            fir_design=self.fir_design,
-            verbose='error'
-        )
-
-    def get_id(self):
-        ''' Returns a unique ID for this preprocessing step. '''
-        return (f"{self.__class__.__name__}_{self.l_freq}_{self.h_freq}_"
-                f"{self.l_trans_bandwidth}_{self.h_trans_bandwidth}")
 
 class WindowData(Preprocess):
     ''' Slices the continuous data into windows (epochs) of a specified
@@ -763,11 +716,9 @@ def neurotransformer_pipeline(dataset='TUH'):
     if (dataset == 'TUH'):
         pipeline.add(ReduceChannels())
     elif (dataset == 'NMT'):
-        pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
-    pipeline.add(FirBandPassFilter(l_freq=1, h_freq=45, l_trans_bandwidth=0.5, h_trans_bandwidth=5.62))
-    pipeline.add(ArtifactRemoval(threshold=5.0))
+        pipeline.add(ReduceChannels(channels=NEUROTRANSFORMER_CHANNELS))
+    pipeline.add(BandPassFilter(l_freq=1, h_freq=45))
     pipeline.add(ResampleData(200))
-    pipeline.add(Scale(1e6))
     pipeline.add(WindowData())
     return pipeline
 
