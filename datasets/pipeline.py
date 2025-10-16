@@ -765,7 +765,7 @@ def neurotransformer_pipeline(dataset='TUH'):
     elif (dataset == 'NMT'):
         pipeline.add(ReduceChannels(channels= NMT_CHANNELS))
     pipeline.add(FirBandPassFilter(l_freq=1, h_freq=45, l_trans_bandwidth=0.5, h_trans_bandwidth=5.62))
-    pipeline.add(ArtifactRemoval(threshold=ica_threshold))
+    pipeline.add(ArtifactRemoval(threshold=5.0))
     pipeline.add(ResampleData(200))
     pipeline.add(Scale(1e6))
     pipeline.add(WindowData())
