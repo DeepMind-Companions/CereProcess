@@ -99,23 +99,5 @@ PAIRS = [
 
     #('EEG FZ-REF','EEG CZ-REF'), # missing
     #('EEG CZ-REF','EEG PZ-REF') # missing
-NEUROTRANSFORMER_CHANNELS= ['FP1',
- 'FP2',
- 'F3',
- 'F4',
- 'C3',
- 'C4',
- 'P3',
- 'P4',
- 'O1',
- 'O2',
- 'F7',
- 'F8',
- 'T3',
- 'T4',
- 'T5',
- 'T6',
- 'FZ',
- 'CZ',
- 'PZ'
- ]
+
+NEUROTRANSFORMER_CHANNELS= ['FP1', 'FP2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'F7', 'F8', 'T3', 'T4', 'T5', 'T6', 'FZ', 'PZ', 'CZ']
